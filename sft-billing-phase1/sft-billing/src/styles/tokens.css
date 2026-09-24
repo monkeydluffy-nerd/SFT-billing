@@ -1,0 +1,125 @@
+/**
+ * SFT Billing design tokens.
+ *
+ * Every value a component uses — color, radius, shadow, motion timing —
+ * is read from a variable defined here, never hard-coded in a component.
+ * Values are space-separated RGB triples so Tailwind's `rgb(var(--x) /
+ * <alpha-value>)` pattern can apply opacity without a second variable.
+ *
+ * Rule of thumb for status colors: they mean something (financial state)
+ * and nothing else. They are never reused decoratively.
+ */
+
+:root {
+  /* Surfaces */
+  --color-canvas: 247 245 241;         /* #F7F5F1 warm off-white page background */
+  --color-surface: 255 255 255;        /* #FFFFFF elevated / card surfaces */
+  --color-surface-raised: 255 255 255; /* surfaces floating above surface (modals, palette) */
+
+  /* Text */
+  --color-ink: 27 26 24;               /* #1B1A18 primary text */
+  --color-ink-muted: 107 103 95;       /* #6B675F secondary text */
+  --color-ink-faint: 163 158 147;      /* #A39E93 tertiary / placeholder text */
+
+  /* Structure */
+  --color-border: 231 227 219;         /* #E7E3DB hairline borders */
+  --color-border-strong: 213 207 194;  /* #D5CFC2 borders that need slightly more contrast */
+
+  /* Primary accent (actions, active states, healthy financial signal) */
+  --color-accent: 31 90 68;            /* #1F5A44 deep emerald */
+  --color-accent-ink: 255 255 255;     /* text/icon color on top of accent */
+
+  /* AURA identity accent — used only for AURA's mark and its panel, never for status */
+  --color-premium: 156 122 60;         /* #9C7A3C muted champagne / bronze */
+
+  /* Financial state colors — never used decoratively */
+  --color-success: 31 90 68;           /* paid */
+  --color-success-bg: 228 239 233;
+
+  --color-pending: 90 100 115;         /* pending — a calm blue-gray; this is a normal state, not a warning */
+  --color-pending-bg: 231 234 238;
+
+  --color-caution: 138 109 29;         /* overdue, 1–29 days: amber, mild */
+  --color-caution-bg: 243 234 212;
+
+  --color-overdue: 140 47 47;          /* overdue, 30+ days: desaturated brick red */
+  --color-overdue-bg: 240 224 222;
+  --color-overdue-strong: 110 33 33;
+  --color-overdue-strong-bg: 235 210 207;
+
+  --color-neutral: 122 117 108;        /* draft */
+  --color-neutral-bg: 234 231 224;
+
+  /* Type */
+  --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype", serif;
+  --font-sans: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Structure */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* Depth — reserved for genuinely floating elements only (see tokens usage) */
+  --shadow-float: 0 8px 24px -8px rgb(27 26 24 / 0.12), 0 2px 6px -2px rgb(27 26 24 / 0.08);
+  --shadow-float-lg: 0 20px 48px -12px rgb(27 26 24 / 0.18), 0 4px 12px -4px rgb(27 26 24 / 0.1);
+
+  /* Motion */
+  --duration-micro: 160ms;
+  --duration-panel: 260ms;
+}
+
+.dark {
+  --color-canvas: 20 19 18;            /* warm near-black, never pure #000 */
+  --color-surface: 28 27 25;
+  --color-surface-raised: 34 33 30;
+
+  --color-ink: 240 238 233;
+  --color-ink-muted: 168 163 152;
+  --color-ink-faint: 110 106 98;
+
+  --color-border: 51 49 44;
+  --color-border-strong: 68 65 58;
+
+  --color-accent: 62 138 109;          /* slightly desaturated/lightened so it doesn't vibrate on dark */
+  --color-accent-ink: 12 20 17;
+
+  --color-premium: 189 155 96;
+
+  --color-success: 62 138 109;
+  --color-success-bg: 34 48 42;
+
+  --color-pending: 150 159 173;
+  --color-pending-bg: 39 44 51;
+
+  --color-caution: 205 168 84;
+  --color-caution-bg: 51 43 24;
+
+  --color-overdue: 200 108 105;
+  --color-overdue-bg: 54 33 32;
+  --color-overdue-strong: 214 129 126;
+  --color-overdue-strong-bg: 61 30 29;
+
+  --color-neutral: 158 152 141;
+  --color-neutral-bg: 45 43 39;
+
+  --shadow-float: 0 8px 24px -8px rgb(0 0 0 / 0.4), 0 2px 6px -2px rgb(0 0 0 / 0.3);
+  --shadow-float-lg: 0 20px 48px -12px rgb(0 0 0 / 0.5), 0 4px 12px -4px rgb(0 0 0 / 0.35);
+}
+
+/* Tabular numerals for anything financial — the single detail that makes
+   columns of money feel trustworthy at a glance. */
+.font-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Respect reduced-motion preferences globally. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

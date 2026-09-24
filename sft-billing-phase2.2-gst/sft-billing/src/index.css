@@ -1,0 +1,128 @@
+@import "./styles/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+  }
+
+  /* Visible keyboard focus everywhere — this is office software used all
+     day with a keyboard; focus rings are never suppressed. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-canvas;
+  }
+
+  ::selection {
+    @apply bg-accent/20;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  html,
+  body,
+  #root {
+    height: auto;
+    min-height: 0;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .app-shell-root {
+    display: block;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .app-shell-content {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .invoice-print-region {
+    width: 210mm;
+    margin: 0 auto;
+  }
+
+  .invoice-create-layout {
+    display: block;
+    padding: 0;
+  }
+
+  .invoice-create-layout > .invoice-print-region {
+    width: 210mm;
+    padding: 0;
+  }
+
+  .invoice-document {
+    width: 210mm;
+    min-height: 297mm;
+    max-width: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 14mm;
+    background: #fff;
+    color: #1b1a18;
+  }
+
+  body:has([data-print-document="payment-receipt"]) .app-shell-content {
+    display: none;
+  }
+
+  .payment-receipt-modal {
+    position: static;
+    display: block;
+  }
+
+  .payment-receipt-modal [data-modal-backdrop] {
+    display: none;
+  }
+
+  .payment-receipt-panel {
+    position: static;
+    width: 100%;
+    max-width: none;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: #fff;
+  }
+
+  .payment-receipt-panel [data-modal-header] {
+    padding: 0;
+  }
+
+  .payment-receipt-panel [data-modal-header] > div {
+    margin-top: 0;
+  }
+
+  .receipt-document {
+    width: 210mm;
+    min-height: 120mm;
+    margin: 0 auto;
+    padding: 14mm;
+    color: #1b1a18;
+    background: #fff;
+  }
+}

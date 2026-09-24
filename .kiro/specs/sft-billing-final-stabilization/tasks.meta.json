@@ -1,0 +1,362 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Inventory the current frontend pages/components/services/hooks/types, backend schemas/routes/services/excel helpers, existing export and navigation state, and test/build commands; verify the actual current implementation against the requirements/design before selecting edit points.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899124
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927921372
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788928198599
+      }
+    ],
+    "1.2 Run the existing focused unit, backend, integration, TypeScript, ESLint, and build checks that are available before edits; capture baseline failures for lifecycle, payment/proof, renderer/navigation, terminology, layout, encoding, and configuration issues.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899185
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788928218333
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788928641027
+      }
+    ],
+    "2.1 Add the optional `PaymentProof`, `PaymentProofUpload`, `PaymentProofError`, and `RecordPaymentResult` shapes to the existing frontend payment/domain type locations without changing payment identity, amount, method, invoice association, or timestamps.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899283
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788928658316
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788929496309
+      }
+    ],
+    "2.2 Extend `DataProvider`, `mockDataProvider`, `apiDataProvider`, and payment hooks as one contract change for no-proof JSON and proof-bearing multipart submissions, persisted proof metadata on reads, structured proof errors, reload-driven display state, and one-file proof replacement through the same approved payment boundary.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899355
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788929521046
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788930202125
+      }
+    ],
+    "2.3 Write mandatory provider contract/unit tests for payment submission with and without proof, required-field rejection without a provider call, response mapping parity between mock/API adapters, persisted proof metadata, retained-payment proof-error results, and replacement requests that preserve the existing payment identity without a separate public mutation contract.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899409
+      }
+    ],
+    "3.1 Extend `backend/app/models/schemas.py` and the existing payment route contract with optional proof metadata, one-file upload handling, backend-generated references, structured proof-specific errors, and rejection of client-supplied attachment references while preserving ordinary no-proof JSON behavior.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899470
+      }
+    ],
+    "3.2 Implement the application-managed attachment helper/service under `backend/app/services/` with a configured local attachment root fallback, generated payment-specific relative references, temporary/staged writes, readback validation, normalized path validation, traversal/absolute-path/symlink protection, safe reads, and best-effort orphan cleanup.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899538
+      }
+    ],
+    "3.3 Extend `backend/app/excel/constants.py`, `rows.py`, and workbook initialization/load paths with backward-compatible optional proof metadata columns (`proof_fileName`, `proof_mimeType`, `proof_sizeBytes`, `proof_uploadedAt`, `proof_attachmentReference`).": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899588
+      }
+    ],
+    "3.4 Orchestrate payment validation, exact generated payment identity plus `invoiceId` association, durable payment-row persistence, activity behavior, proof write/readback/enrichment, replacement, response envelopes, and proof-specific failure handling in `payment_service.py` and `routes/payments.py`.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899633
+      }
+    ],
+    "3.5 Write mandatory backend integration/contract tests for POST/GET payments with and without proof, exact payment/invoice association, workbook reload persistence, legacy workbooks missing proof headers, and reference/path safety.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899711
+      }
+    ],
+    "4. Preserve lifecycle, ledger status, calculations, rollups, and numbering semantics": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899782
+      }
+    ],
+    "4.1 Verify or minimally correct `Invoice_Math_Module`/invoice rollup adapters so billed invoices derive Outstanding, Overdue, or Received from payment totals, computed grand total, and due date; drafts have no ledger status and are excluded from financial totals.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899832
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788928665249
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788929503934
+      }
+    ],
+    "4.2 Verify or minimally correct Bill/Save/Download/Send/Reminder actions and numbering allocation across Create Invoice, Invoices, Invoice Detail, activity, and numbering modules.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899883
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788929530504
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788930195437
+      }
+    ],
+    "4.3 Update core workflow pages and related adapters to use Draft/Billed and ledger-derived Outstanding/Overdue/Received semantics, exclude drafts from financial totals, remove Mark Paid and Duplicate actions, show only appropriate draft/billed/payment/reminder/receipt actions, and preserve existing data-provider layering.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927899949
+      }
+    ],
+    "4.4 Write mandatory unit/regression tests for the ₹25,700 taxable-value example (CGST ₹2,313, SGST ₹2,313, total ₹30,326), amount-in-words from final rounded total, draft exclusion, billed status transitions, rollups, Bill/Save/Download/Reminder semantics, and stable numbering sequences.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900009
+      }
+    ],
+    "5.1 Extract a shared, testable `InvoiceDocumentModel` adapter from `InvoicePreview` for business identity, canonical logo, invoice/customer/order-delivery fields, supported CGST/SGST/discount/round-off values, bank/declaration/signatory sections, normalized Unicode labels, and final amount-in-words.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900064
+      }
+    ],
+    "5.2 Extract the existing invoice markup into one `Invoice_Document_Renderer`; make `InvoicePreview` a thin consumer and ensure the renderer owns document structure/labels without a second monetary calculation path.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900113
+      }
+    ],
+    "5.3 Replace the primary `InvoicePage`/canonical Invoice Detail content with the full professional document renderer, keeping ledger status and payment history outside the document, draft continuation to Create Invoice, billed print/PDF/download/back actions, loading/error/not-found states, and existing provider patterns.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900184
+      }
+    ],
+    "5.4 Update `invoiceExportService` and existing print/PDF integration to consume the same `InvoiceDocumentModel` and math values as preview/detail while retaining the existing export entry point and output integration.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900287
+      }
+    ],
+    "6.1 Update `PaymentsPage` and its payment form to validate invoice/positive amount/method with field-level errors, submit through the provider with optional one-file proof, request a one-file replacement through the same approved payment boundary, refresh from the provider after success, show persisted proof state, preserve payment and prior proof on proof failure, and omit proof-removal controls.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900372
+      }
+    ],
+    "6.2 Create `PaymentReceiptView` as a real printable/viewable receipt document with receipt/payment reference, invoice number, customer, payment date, amount, method, optional transaction reference, business details, proof-unavailable state, and an exact canonical invoice link.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900448
+      }
+    ],
+    "6.3 Write mandatory payment UI/integration tests for no-proof and proof-bearing submission, persisted proof display after reload, retained-payment proof-write/readback/enrichment failures with same id/invoiceId and actionable proof errors, exactly-one activity behavior, successful one-file replacement preserving the prior proof until enrichment succeeds, receipt access from both approved surfaces, receipt field projection, and missing payment/invoice states.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900518
+      }
+    ],
+    "7.1 Implement or normalize shared `InvoiceNumberLink` and stable-id navigation in `useWorkspaceStore`/`App.tsx`, including row-click propagation handling, selected invoice state, receipt return state, loading/error/not-found behavior, and no filtered-list fallback.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900580
+      }
+    ],
+    "7.2 Replace invoice-number render targets with `InvoiceNumberLink` in Invoices, Payments, Clients, Client Detail, Overview, Invoice Detail supporting content, and Payment Receipt wherever an invoice number is shown.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900642
+      }
+    ],
+    "7.3 Update Reports, Intelligence, and CommandPalette invoice result actions to open the exact Invoice Detail page by stable id; add only minimal existing-row id passthrough where required.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900702
+      }
+    ],
+    "7.4 Write mandatory exact-navigation tests for every approved invoice-number surface, including Reports tables, Intelligence `openInvoice`, CommandPalette results, Payment Receipt, stale/missing ids, and not-found states.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900755
+      }
+    ],
+    "8. Checkpoint - Ensure shared renderer, payment receipt, exact-navigation, and focused UI tests pass before layout, terminology, and Settings cleanup; ask the user if questions arise.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900804
+      }
+    ],
+    "9.1 Update `CreateInvoicePage` to retain the left-form/right-preview layout with one outer page scroll owner, no inaccessible nested scrolling, reachable tax/totals/round-off/document controls, correct order/delivery mapping through the shared renderer, and no sticky-footer occlusion.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900867
+      }
+    ],
+    "9.2 Refactor `LineItemEditor` numeric entry to use controlled text buffers that preserve empty values, decimal text including trailing `.`, clear-then-type behavior, and no extraneous leading/stale digits while passing finite numeric values to domain calculations.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900939
+      }
+    ],
+    "9.3 Apply footer-aware/protected-content offsets to `AuraPanel` on Create Invoice and Invoice Detail while preserving ordinary fixed bottom-right behavior and all response/classification/intelligence behavior.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927900987
+      }
+    ],
+    "10.1 Correct only explicitly targeted `Pending` → `Outstanding`, `Collected` → `Received`, and current/prior period comparison labels/delta direction in Reports and Intelligence; preserve existing metrics, filters, classifications, data sources, exports, and untargeted legacy labels.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927901035
+      }
+    ],
+    "10.2 Write mandatory focused UI tests for targeted status labels, current/prior comparison direction, preserved untargeted labels, and unchanged Reports/Intelligence data-source/filter behavior.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927901085
+      }
+    ],
+    "11.1 Update `WorkspaceSettingsPage` to remove unnecessary/fake Regional Formatting controls while retaining useful real workspace settings, and consolidate Settings and invoice rendering on one canonical business-profile logo value/preview.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927901145
+      }
+    ],
+    "11.2 Scan and correct mojibake in `CreateInvoicePage`, `InvoicePreview`, the shared renderer/model, `PaymentReceiptView`, `WorkspaceSettingsPage`, and other directly affected production labels; verify intended rupee, middle-dot, em-dash, ellipsis, minus, arrow, check, and apostrophe characters.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927901197
+      }
+    ],
+    "11.3 Resolve Node path/`__dirname` typing and `tsconfig.node.json` emit conflicts through correct TypeScript/Vite project configuration; do not use `@ts-ignore`, `@ts-nocheck`, or unnecessary `any`.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927901251
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788928226827
+      },
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788928647975
+      }
+    ],
+    "11.4 Add mandatory static/scope checks for no SQLite/second DB/localStorage proof storage, no direct presentation-layer storage access, no phase1 appStore mutations, no duplicate renderer/export path, no unapproved Reports/Intelligence redesign, no external messaging, no billed-edit workflow, and no IGST frontend/backend/calculation/export/persistence additions.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927901343
+      }
+    ],
+    "12. Checkpoint - Ensure all targeted corrections and scope checks pass before the final integrated verification; ask the user if questions arise.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927901489
+      }
+    ],
+    "13.1 Run the complete automated integration/regression suite across frontend providers/hooks/pages, backend FastAPI routes/services/workbook reload, payment proof persistence, receipt, exact navigation, shared renderer/export, lifecycle/status/rollups, numbering, amount-in-words, layout/input, targeted Reports/Intelligence, Settings/logo, encoding, and layering.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927901569
+      }
+    ],
+    "13.2 Run clean and repeated `tsc -b`, ESLint, frontend/Vite build, backend test suite, unit/property tests (each property test at least 100 iterations where implemented), and integration tests; fix all errors without suppressions and confirm no stray emitted config files.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927901617
+      }
+    ],
+    "13.3 Execute the final manual flow verification matrix on the implemented application: create/save/download/edit a draft, create another invoice without renumbering/finalizing the draft, bill/send/remind without external messaging, record payments with and without proof, reopen and inspect proof/receipt, follow invoice links from every approved surface, inspect exact not-found states, verify shared preview/detail/print/export values, inspect Create Invoice scroll/input/AURA behavior, check targeted Reports/Intelligence labels/comparisons, confirm Settings/logo cleanup, and scan production UI for mojibake.": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788927901680
+      }
+    ],
+    "1. Inspect the existing implementation and establish a baseline before changing code": [
+      {
+        "executionId": "21489e66-d97b-4fde-bb79-7fcd4e5e04ca",
+        "chatSessionId": "sess_f18bd654-b19c-4b56-beeb-0e8eba85c235",
+        "timestamp": 1788928641160
+      }
+    ]
+  }
+}

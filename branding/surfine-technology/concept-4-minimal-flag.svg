@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 760" font-family="'Segoe UI', Arial, sans-serif">
+  <defs>
+    <symbol id="mark" viewBox="0 0 100 100">
+      <rect x="24" y="15" width="52" height="7" fill="currentColor"/>
+      <rect x="46.5" y="15" width="7" height="20" fill="currentColor"/>
+      <path d="M76,39 C76,26 63,20 50,20 C39,20 30,26 30,34 C30,43 43,46 50,49 C58,52 78,57 78,69 C78,81 64,89 50,89 C36,89 24,82 24,71"
+            fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+
+  <rect x="0" y="0" width="1000" height="760" fill="#FFFFFF"/>
+  <text x="20" y="34" font-size="22" font-weight="700" letter-spacing="0.5" fill="#12151A">SURFINE TECHNOLOGY</text>
+  <text x="20" y="54" font-size="13" fill="#6B7280">Concept 4 - Minimal Flag (ultra-thin T flag, open airy S, maximum negative space)</text>
+
+  <circle cx="770" cy="26" r="7" fill="#12151A"/><text x="770" y="46" font-size="9" fill="#6B7280" text-anchor="middle">Ink</text>
+  <circle cx="815" cy="26" r="7" fill="#14304D"/><text x="815" y="46" font-size="9" fill="#6B7280" text-anchor="middle">Navy</text>
+  <circle cx="860" cy="26" r="7" fill="#1D6E8A"/><text x="860" y="46" font-size="9" fill="#6B7280" text-anchor="middle">Teal</text>
+
+  <rect x="20" y="70" width="290" height="310" fill="none" stroke="#E5E7EB"/>
+  <use href="#mark" x="75" y="135" width="180" height="180" style="color:#12151A"/>
+  <text x="165" y="368" font-size="12" fill="#6B7280" text-anchor="middle">1. Symbol alone</text>
+
+  <rect x="340" y="70" width="290" height="310" fill="none" stroke="#E5E7EB"/>
+  <use href="#mark" x="420" y="100" width="130" height="130" style="color:#12151A"/>
+  <text x="485" y="272" font-size="28" font-weight="700" letter-spacing="2" fill="#12151A" text-anchor="middle">SURFINE</text>
+  <text x="485" y="294" font-size="13" font-weight="500" letter-spacing="4" fill="#6B7280" text-anchor="middle">TECHNOLOGY</text>
+  <text x="485" y="368" font-size="12" fill="#6B7280" text-anchor="middle">2. Symbol + wordmark (stacked)</text>
+
+  <rect x="660" y="70" width="320" height="310" fill="none" stroke="#E5E7EB"/>
+  <use href="#mark" x="700" y="150" width="150" height="150" style="color:#12151A"/>
+  <text x="865" y="218" font-size="24" font-weight="700" letter-spacing="1" fill="#12151A" text-anchor="middle">SURFINE</text>
+  <text x="865" y="240" font-size="13" font-weight="500" letter-spacing="3" fill="#6B7280" text-anchor="middle">TECHNOLOGY</text>
+  <text x="820" y="368" font-size="12" fill="#6B7280" text-anchor="middle">3. Horizontal lockup</text>
+
+  <rect x="20" y="430" width="290" height="300" fill="none" stroke="#E5E7EB"/>
+  <rect x="75" y="470" width="180" height="180" rx="90" fill="#12151A"/>
+  <use href="#mark" x="110" y="505" width="110" height="110" style="color:#FFFFFF"/>
+  <text x="165" y="718" font-size="12" fill="#6B7280" text-anchor="middle">4. Compact app / icon tile</text>
+
+  <rect x="340" y="430" width="290" height="300" fill="none" stroke="#E5E7EB"/>
+  <use href="#mark" x="415" y="470" width="150" height="150" style="color:#12151A"/>
+  <text x="485" y="718" font-size="12" fill="#6B7280" text-anchor="middle">5a. Black on white</text>
+
+  <rect x="660" y="430" width="320" height="300" fill="#12151A" stroke="#E5E7EB"/>
+  <use href="#mark" x="745" y="470" width="150" height="150" style="color:#FFFFFF"/>
+  <text x="820" y="718" font-size="12" fill="#9CA3AF" text-anchor="middle">5b. White on black</text>
+</svg>
