@@ -21,11 +21,6 @@ import { getInvoiceLedgerStatus } from "@/lib/invoiceMath";
 import { getClientName } from "@/lib/clientLookup";
 import { formatCurrency } from "@/lib/formatters";
 
-/**
- * The Invoice_Detail_Page renders the same normalized document as the create
- * preview. Ledger status, actions, and payment history intentionally remain
- * supporting content outside that document.
- */
 export function InvoicePage() {
   const {
     data: invoices,
@@ -46,7 +41,7 @@ export function InvoicePage() {
     error: businessError,
     reload: reloadBusiness,
   } = useBusinessProfile();
-  const { selectedInvoiceId, goToInvoices, openCreateInvoice, navigateToPaymentReceipt, selectInvoice } = useWorkspaceStore();
+  const { selectedInvoiceId, goToInvoices, openCreateInvoice, navigateToPaymentReceipt, navigateToInvoiceDetail } = useWorkspaceStore();
 
   const invoice = invoices?.find((candidate) => candidate.id === selectedInvoiceId);
   const invoicePayments = useMemo(
@@ -64,36 +59,24 @@ export function InvoicePage() {
     reloadBusiness();
   }
 
+  function handleUploaded(saved: { id: string }) {
+    reloadInvoices();
+    navigateToInvoiceDetail(saved.id);
+  }
+
   if (error) {
     return (
       <div>
         <PageHeader
           title="Invoice"
           action={
-            <button
-              type="button"
-              onClick={() => goToInvoices()}
-              className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent transition-colors duration-micro hover:border-accent/40 hover:bg-accent/[0.14]"
-            >
+            <button type="button" onClick={() => goToInvoices()} className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent">
               <ArrowLeft size={14} /> Back to invoices
             </button>
           }
         />
         <div className="px-10 py-10">
-          <EmptyState
-            icon={AlertTriangle}
-            title="Couldn't load invoice"
-            description={error.message}
-            action={
-              <button
-                type="button"
-                onClick={retryLoad}
-                className="text-sm font-medium text-accent hover:underline"
-              >
-                Retry
-              </button>
-            }
-          />
+          <EmptyState icon={AlertTriangle} title="Couldn't load invoice" description={error.message} action={<button type="button" onClick={retryLoad} className="text-sm font-medium text-accent hover:underline">Retry</button>} />
         </div>
       </div>
     );
@@ -118,11 +101,7 @@ export function InvoicePage() {
         <PageHeader
           title="Invoice"
           action={
-            <button
-              type="button"
-              onClick={() => goToInvoices()}
-              className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent transition-colors duration-micro hover:border-accent/40 hover:bg-accent/[0.14]"
-            >
+            <button type="button" onClick={() => goToInvoices()} className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent">
               <ArrowLeft size={14} /> Back to invoices
             </button>
           }
@@ -130,12 +109,7 @@ export function InvoicePage() {
         <div className="px-10 py-10">
           <EmptyState icon={Inbox} title="Invoice not found" description="This invoice may have been removed." />
           <div className="mt-6 flex justify-center">
-            <InvoiceFileActions
-              onUploaded={(saved) => {
-                reloadInvoices();
-                selectInvoice(saved.id);
-              }}
-            />
+            <InvoiceFileActions onUploaded={handleUploaded} />
           </div>
         </div>
       </div>
@@ -153,11 +127,7 @@ export function InvoicePage() {
           title={invoice.number}
           subtitle={getClientName(clients, invoice.clientId)}
           action={
-            <button
-              type="button"
-              onClick={() => goToInvoices()}
-              className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent transition-colors duration-micro hover:border-accent/40 hover:bg-accent/[0.14]"
-            >
+            <button type="button" onClick={() => goToInvoices()} className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent">
               <ArrowLeft size={14} /> Back to invoices
             </button>
           }
@@ -170,13 +140,7 @@ export function InvoicePage() {
             <Printer size={14} aria-hidden /> Print / PDF
           </Button>
           <DownloadInvoiceButton invoice={invoice} client={client} business={business} />
-          <InvoiceFileActions
-            invoice={invoice}
-            onUploaded={(saved) => {
-              reloadInvoices();
-              selectInvoice(saved.id);
-            }}
-          />
+          <InvoiceFileActions invoice={invoice} onUploaded={handleUploaded} />
           <InvoiceDetailActions
             invoice={invoice}
             ledgerInfo={ledgerInfo}
@@ -208,10 +172,7 @@ export function InvoicePage() {
           <InvoiceDocumentRenderer model={model} />
         </section>
 
-        <section
-          aria-label="Invoice ledger summary"
-          className="flex flex-wrap items-center gap-4 rounded-lg border border-border p-5 print:hidden"
-        >
+        <section aria-label="Invoice ledger summary" className="flex flex-wrap items-center gap-4 rounded-lg border border-border p-5 print:hidden">
           <div>
             {invoice.isDraft ? (
               <StatusChip info={{ status: "draft", daysOverdue: 0, severity: null }} />
