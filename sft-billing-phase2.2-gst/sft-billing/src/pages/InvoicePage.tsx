@@ -7,6 +7,7 @@ import { StatusChip } from "@/components/shared/StatusChip";
 import { LedgerStatusChip } from "@/components/shared/LedgerStatusChip";
 import { Button } from "@/components/shared/Button";
 import { DownloadInvoiceButton } from "@/components/create-invoice/DownloadInvoiceButton";
+import { InvoiceFileActions } from "@/components/create-invoice/InvoiceFileActions";
 import { InvoiceDocumentRenderer } from "@/components/create-invoice/InvoiceDocumentRenderer";
 import { buildInvoiceDocumentModel } from "@/components/create-invoice/invoiceDocumentModel";
 import { InvoiceDetailActions } from "@/components/invoices/InvoiceDetailActions";
@@ -45,10 +46,8 @@ export function InvoicePage() {
     error: businessError,
     reload: reloadBusiness,
   } = useBusinessProfile();
-  const { selectedInvoiceId, goToInvoices, openCreateInvoice, navigateToPaymentReceipt } = useWorkspaceStore();
+  const { selectedInvoiceId, goToInvoices, openCreateInvoice, navigateToPaymentReceipt, selectInvoice } = useWorkspaceStore();
 
-  // The selected stable id is the only resolution key. This deliberately does
-  // not fall back to a first item, display number, or filtered invoice list.
   const invoice = invoices?.find((candidate) => candidate.id === selectedInvoiceId);
   const invoicePayments = useMemo(
     () => (payments ?? []).filter((payment) => payment.invoiceId === selectedInvoiceId),
@@ -130,6 +129,14 @@ export function InvoicePage() {
         />
         <div className="px-10 py-10">
           <EmptyState icon={Inbox} title="Invoice not found" description="This invoice may have been removed." />
+          <div className="mt-6 flex justify-center">
+            <InvoiceFileActions
+              onUploaded={(saved) => {
+                reloadInvoices();
+                selectInvoice(saved.id);
+              }}
+            />
+          </div>
         </div>
       </div>
     );
@@ -159,14 +166,17 @@ export function InvoicePage() {
 
       <div className="space-y-8 px-10 py-7 print:space-y-0 print:px-0 print:py-0">
         <div className="flex flex-wrap items-center justify-end gap-2 print:hidden">
-          {!invoice.isDraft && (
-            <>
-              <Button variant="secondary" onClick={() => window.print()}>
-                <Printer size={14} aria-hidden /> Print / PDF
-              </Button>
-              <DownloadInvoiceButton invoice={invoice} client={client} business={business} />
-            </>
-          )}
+          <Button variant="secondary" onClick={() => window.print()}>
+            <Printer size={14} aria-hidden /> Print / PDF
+          </Button>
+          <DownloadInvoiceButton invoice={invoice} client={client} business={business} />
+          <InvoiceFileActions
+            invoice={invoice}
+            onUploaded={(saved) => {
+              reloadInvoices();
+              selectInvoice(saved.id);
+            }}
+          />
           <InvoiceDetailActions
             invoice={invoice}
             ledgerInfo={ledgerInfo}
