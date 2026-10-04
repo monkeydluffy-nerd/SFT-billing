@@ -1,19 +1,14 @@
 # SFT Billing Software
 
-The only working app is `sft-billing-phase2.2-gst/sft-billing`.
+Working app: `sft-billing-phase2.2-gst/sft-billing`.
+Backend: `backend` (FastAPI + `backend/data/SFT_Billing.xlsx`).
 
-Older phase folders and zip copies are leftovers. Do not edit them.
+Desktop dev uses the local API, not Supabase.
 
-This app is offline-first. It does not use Supabase. Invoices, clients, and payments are saved in this browser on this PC (`localStorage`, key `sft-billing-offline-v1`).
-
-## Run
-
-```bash
-cd sft-billing-phase2.2-gst/sft-billing
-npm install
-npm run dev
+```text
+VITE_USE_API=true
+VITE_API_BASE_URL=http://127.0.0.1:8000
 ```
 
-Open the local Vite URL. Download invoice writes a PDF on this PC. Upload invoice reads a JSON file exported from this app.
-
-Set `VITE_USE_API=true` only if you also start the local FastAPI backend. That path is optional and still stays on this PC.
+Run `start_dev.bat`. New invoices should appear in `backend/data/SFT_Billing.xlsx`.
+If `VITE_USE_API` is not true, the UI falls back to on-PC browser storage, not demo data.
