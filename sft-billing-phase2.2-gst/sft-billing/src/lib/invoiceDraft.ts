@@ -32,6 +32,7 @@ export function createDraftInvoice(
   existing: Invoice[],
   prefill: InvoiceDraftPrefill = {},
   defaultGst?: InvoiceGst,
+  businessDeclaration?: string,
 ): Invoice {
   const now = new Date();
   const due = new Date(now);
@@ -48,7 +49,7 @@ export function createDraftInvoice(
     discount: prefill.discount ?? 0,
     roundOff: 0,
     notes: prefill.notes,
-    terms: prefill.terms,
+    terms: prefill.terms ?? businessDeclaration,
     supplierCode: prefill.supplierCode,
     poNumber: prefill.poNumber,
     poDate: prefill.poDate,

@@ -1,0 +1,30 @@
+[package]
+name = "sft-billing"
+version = "0.1.1"
+description = "SFT Billing - Premium office billing and financial management desktop application"
+authors = ["SURFINE TECHNOLOGY"]
+license = "MIT"
+repository = "https://github.com/surfinetechnology/sft-billing"
+edition = "2021"
+rust-version = "1.60"
+
+[build-dependencies]
+tauri-build = { version = "1.5.5", features = [] }
+image = { version = "0.24", features = ["png"] }
+ico = "0.5"
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tauri = { version = "1.8.3", features = [ "shell-sidecar", "shell-open", "process-command-api", "process-relaunch", "process-exit", "fs-all", "http-all", "path-all"] }
+
+[features]
+custom-protocol = [ "tauri/custom-protocol" ]
+
+[package.metadata.win]
+manufacturer = "SURFINE TECHNOLOGY"
+product-name = "SFT Billing"
+
+[package.metadata.wix]
+manufacturer = "SURFINE TECHNOLOGY"
+upgrade-code = "4b0d8ff2-bd40-5266-b946-98e11d2e4aab"

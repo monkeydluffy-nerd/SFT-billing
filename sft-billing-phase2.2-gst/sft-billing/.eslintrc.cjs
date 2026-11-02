@@ -13,7 +13,7 @@ module.exports = {
     ecmaFeatures: { jsx: true },
   },
   plugins: ["@typescript-eslint", "react-refresh"],
-  ignorePatterns: ["dist", "node_modules", "*.config.*"],
+  ignorePatterns: ["dist", "node_modules", "*.config.*", "src-tauri/target"],
   rules: {
     "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
     "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],

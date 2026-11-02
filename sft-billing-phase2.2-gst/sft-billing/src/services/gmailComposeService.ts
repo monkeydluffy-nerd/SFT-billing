@@ -1,7 +1,7 @@
 import { computeInvoiceTotals } from "@/lib/invoiceMath";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import type { BusinessProfile, Client, Invoice } from "@/types";
-import { downloadInvoicePdf } from "./invoicePdfService";
+import { downloadInvoiceTemplate } from "./invoiceTemplateDownloadService";
 
 export interface GmailComposeInput {
   invoice: Invoice;
@@ -102,7 +102,7 @@ export async function downloadInvoiceAndOpenGmail(input: GmailComposeInput): Pro
   let fileName: string;
 
   try {
-    fileName = await downloadInvoicePdf({ invoice: input.invoice, client: input.client, business: input.business });
+    ({ fileName } = await downloadInvoiceTemplate(input.invoice, "pdf"));
   } catch (error) {
     try {
       blankCompose?.close();

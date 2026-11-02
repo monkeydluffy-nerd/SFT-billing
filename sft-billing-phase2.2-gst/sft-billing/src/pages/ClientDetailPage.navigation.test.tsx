@@ -11,7 +11,6 @@ const client: Client = {
   contactName: "Accounts",
   email: "accounts@example.com",
   billingAddress: "1 Test Street",
-  clientSince: "2026-01-01",
 };
 
 const invoice: Invoice = {

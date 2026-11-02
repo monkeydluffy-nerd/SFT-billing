@@ -34,11 +34,11 @@ describe("WorkspaceSettingsPage", () => {
   it("previews the canonical business-profile logo and removes unsupported regional controls", () => {
     render(<WorkspaceSettingsPage />);
 
-    expect(screen.getByRole("img", { name: "SFT Billing Services logo" })).toHaveAttribute(
+    expect(screen.getByRole("img", { name: "SFT Billing Services logo preview" })).toHaveAttribute(
       "src",
       businessProfile.logoUrl,
     );
-    expect(screen.getByText("Current business logo")).toBeInTheDocument();
+    expect(screen.getByText("Preview from the saved business-profile logo URL.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Upload logo" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Preferences" }));

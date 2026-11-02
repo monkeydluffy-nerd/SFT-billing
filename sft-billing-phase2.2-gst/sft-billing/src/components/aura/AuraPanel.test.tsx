@@ -9,6 +9,7 @@ const PAGES: AppPage[] = [
   "create-invoice",
   "invoice-detail",
   "clients",
+  "products",
   "payments",
   "intelligence",
   "reports",

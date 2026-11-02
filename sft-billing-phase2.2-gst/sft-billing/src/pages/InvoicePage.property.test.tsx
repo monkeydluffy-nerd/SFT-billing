@@ -5,7 +5,7 @@ import { InvoicePage } from "./InvoicePage";
 import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
 import { activeDataProvider } from "@/services";
 import { mockClients } from "@/data/mockClients";
-import { getInvoiceLedgerStatus, getInvoiceTotalsWithWords } from "@/lib/invoiceMath";
+import { computeInvoiceTotals, getInvoiceLedgerStatus } from "@/lib/invoiceMath";
 import { formatCurrency } from "@/lib/formatters";
 import type { Invoice, Payment } from "@/types";
 
@@ -54,7 +54,7 @@ describe("Feature: core-business-system, Property 10: Detail page totals and led
 
           const { unmount, container } = render(<InvoicePage />);
 
-          const expectedTotals = getInvoiceTotalsWithWords(invoice);
+          const expectedTotals = computeInvoiceTotals(invoice);
           const expectedLedger = getInvoiceLedgerStatus(invoice, payments);
           expect(expectedLedger).not.toBeNull();
           if (!expectedLedger) {
@@ -63,18 +63,15 @@ describe("Feature: core-business-system, Property 10: Detail page totals and led
           }
 
           await waitFor(() => expect(within(container).getAllByText(formatCurrency(expectedTotals.total)).length).toBeGreaterThan(0));
-          // The detail page mounts the visible document plus the offscreen email render,
-          // so the amount-in-words text legitimately appears more than once.
-          expect(within(container).getAllByText(expectedTotals.amountInWords).length).toBeGreaterThan(0);
 
           if (expectedLedger.status === "received") {
-            expect(within(container).getByText("Received")).toBeInTheDocument();
+            expect(within(container).getAllByText("Received").length).toBeGreaterThan(0);
           } else if (expectedLedger.status === "outstanding") {
-            expect(within(container).getByText("Outstanding")).toBeInTheDocument();
+            expect(within(container).getAllByText("Outstanding").length).toBeGreaterThan(0);
           } else {
             expect(
-              within(container).getByText(expectedLedger.daysOverdue === 1 ? "1 day overdue" : `${expectedLedger.daysOverdue} days overdue`),
-            ).toBeInTheDocument();
+              within(container).getAllByText(expectedLedger.daysOverdue === 1 ? "1 day overdue" : `${expectedLedger.daysOverdue} days overdue`).length,
+            ).toBeGreaterThan(0);
           }
 
           unmount();

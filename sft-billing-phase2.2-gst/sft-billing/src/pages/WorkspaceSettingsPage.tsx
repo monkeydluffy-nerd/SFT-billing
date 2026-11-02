@@ -25,6 +25,7 @@ import type { BusinessProfile } from "@/types";
 
 type FormState = {
   name: string;
+  logoUrl: string;
   address: string;
   email: string;
   phone: string;
@@ -51,6 +52,7 @@ const TABS: SettingsTabDefinition[] = [
 function profileToForm(profile: BusinessProfile): FormState {
   return {
     name: profile.name,
+    logoUrl: profile.logoUrl ?? "",
     address: profile.address,
     email: profile.email,
     phone: profile.phone ?? "",
@@ -95,6 +97,7 @@ export function WorkspaceSettingsPage() {
 
     await activeDataProvider.updateBusinessProfile({
       name: form.name.trim(),
+      logoUrl: form.logoUrl.trim() || undefined,
       address: form.address.trim(),
       email: form.email.trim(),
       phone: form.phone.trim() || undefined,
@@ -181,33 +184,31 @@ export function WorkspaceSettingsPage() {
                       <input value={form.pan} onChange={(e) => update("pan", e.target.value.toUpperCase())} className={inputTabular} />
                     </SettingsField>
                     <SettingsField
-                      label="Business logo"
-                      hint={
-                        profile.logoUrl
-                          ? "Used by the canonical invoice document renderer."
-                          : "No logo is configured for this business profile."
-                      }
+                      label="Logo"
+                      hint="Enter the image URL used by invoice documents."
                       fullWidth
                     >
-                      {profile.logoUrl ? (
-                        <div className="flex items-center gap-3 rounded-md border border-border bg-surface px-3 py-2">
-                          <img
-                            src={profile.logoUrl}
-                            alt={`${profile.name} logo`}
-                            className="h-12 w-12 shrink-0 rounded-md object-cover"
-                          />
-                          <div>
-                            <p className="text-sm font-medium text-ink">Current business logo</p>
-                            <p className="mt-0.5 text-xs text-ink-muted">
-                              This business-profile value is used on invoice documents.
-                            </p>
+                      <div className="space-y-3">
+                        <input
+                          type="url"
+                          value={form.logoUrl}
+                          onChange={(e) => update("logoUrl", e.target.value)}
+                          placeholder="https://example.com/logo.png"
+                          className={settingsInputClass}
+                        />
+                        {form.logoUrl ? (
+                          <div className="flex items-center gap-3 rounded-md border border-border bg-surface px-3 py-2">
+                            <img
+                              src={form.logoUrl}
+                              alt={`${form.name || "Business"} logo preview`}
+                              className="h-12 w-12 shrink-0 rounded-md object-cover"
+                            />
+                            <p className="text-xs text-ink-muted">Preview from the saved business-profile logo URL.</p>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="rounded-md border border-dashed border-border px-3 py-2 text-sm text-ink-faint">
-                          No business logo configured
-                        </div>
-                      )}
+                        ) : (
+                          <p className="text-sm text-ink-faint">No business logo configured</p>
+                        )}
+                      </div>
                     </SettingsField>
                   </div>
                 </SettingsSection>
@@ -217,7 +218,7 @@ export function WorkspaceSettingsPage() {
                 <>
                   <SettingsSection icon={Receipt} title="Invoice defaults" description="Applied when a new invoice draft is created">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <FixedValue label="Invoice numbering" value="INV-#### (auto-generated)" hint="Generated automatically, never reused." />
+                      <FixedValue label="Invoice numbering" value="NNN/YYYY-YY (auto-generated)" hint="Generated automatically, never reused." />
                       <FixedValue label="Default payment terms" value="Net 15" />
                       <SettingsField label="Default declaration / terms" fullWidth>
                         <textarea

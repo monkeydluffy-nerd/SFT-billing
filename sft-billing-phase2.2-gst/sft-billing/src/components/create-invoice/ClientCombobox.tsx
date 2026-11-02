@@ -8,7 +8,7 @@ interface ClientComboboxProps {
   clients: Client[];
   value: string;
   onSelect: (clientId: string) => void;
-  onCreateClient: (client: Pick<Client, "name" | "email" | "contactName">) => Promise<string>;
+  onCreateClient: (client: Pick<Client, "name" | "email" | "contactName"> & { phone: string | null; billingAddress: string; gstin: string; pan: string | null }) => Promise<string>;
   disabled?: boolean;
 }
 
@@ -21,7 +21,7 @@ interface ClientComboboxProps {
 export function ClientCombobox({ clients, value, onSelect, onCreateClient, disabled }: ClientComboboxProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [quickAdd, setQuickAdd] = useState<{ name: string; email: string } | null>(null);
+  const [quickAdd, setQuickAdd] = useState<{ name: string; email: string; phone: string; billingAddress: string; gstin: string; pan: string } | null>(null);
   const [creating, setCreating] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -53,8 +53,12 @@ export function ClientCombobox({ clients, value, onSelect, onCreateClient, disab
     setCreating(true);
     const id = await onCreateClient({
       name: quickAdd.name.trim(),
-      email: quickAdd.email.trim() || "billing@example.com",
-      contactName: quickAdd.name.trim(),
+      email: quickAdd.email.trim() || null,
+      contactName: undefined,
+      phone: quickAdd.phone.trim() || null,
+      billingAddress: quickAdd.billingAddress.trim(),
+      gstin: quickAdd.gstin.trim(),
+      pan: quickAdd.pan.trim() || null,
     });
     setCreating(false);
     onSelect(id);
@@ -122,7 +126,7 @@ export function ClientCombobox({ clients, value, onSelect, onCreateClient, disab
             {!quickAdd ? (
               <button
                 type="button"
-                onClick={() => setQuickAdd({ name: query, email: "" })}
+                onClick={() => setQuickAdd({ name: query, email: "", phone: "", billingAddress: "", gstin: "", pan: "" })}
                 className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-accent transition-colors duration-micro hover:bg-accent/5"
               >
                 <Plus size={14} /> Add new client
@@ -142,6 +146,10 @@ export function ClientCombobox({ clients, value, onSelect, onCreateClient, disab
                   placeholder="Billing email"
                   className="h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint"
                 />
+                <input value={quickAdd.phone} onChange={(e) => setQuickAdd({ ...quickAdd, phone: e.target.value })} placeholder="Phone" className="h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint" />
+                <input value={quickAdd.billingAddress} onChange={(e) => setQuickAdd({ ...quickAdd, billingAddress: e.target.value })} placeholder="Billing address" className="h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint" />
+                <input value={quickAdd.gstin} onChange={(e) => setQuickAdd({ ...quickAdd, gstin: e.target.value })} placeholder="GSTIN" className="h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint" />
+                <input value={quickAdd.pan} onChange={(e) => setQuickAdd({ ...quickAdd, pan: e.target.value })} placeholder="PAN" className="h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint" />
                 <div className="flex justify-end gap-2 pt-1">
                   <button
                     type="button"
@@ -152,7 +160,7 @@ export function ClientCombobox({ clients, value, onSelect, onCreateClient, disab
                   </button>
                   <button
                     type="button"
-                    disabled={!quickAdd.name.trim() || creating}
+                    disabled={!quickAdd.name.trim() || !quickAdd.billingAddress.trim() || !quickAdd.gstin.trim() || creating}
                     onClick={submitQuickAdd}
                     className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink disabled:opacity-50"
                   >

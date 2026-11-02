@@ -21,7 +21,7 @@ for (const client of mockClients) {
   events.push({
     id: nextId(),
     type: "client_added",
-    occurredAt: client.clientSince,
+    occurredAt: new Date().toISOString(),
     summary: `${client.name} added as a client`,
     clientId: client.id,
   });

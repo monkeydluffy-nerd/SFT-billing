@@ -7,8 +7,6 @@ import { useBusinessProfile } from "@/hooks/useBusinessProfile";
 import { computeInvoiceTotals } from "@/lib/invoiceMath";
 import { getClientName } from "@/lib/clientLookup";
 import { formatCurrency } from "@/lib/formatters";
-import { InvoiceDocumentRenderer } from "@/components/create-invoice/InvoiceDocumentRenderer";
-import { buildInvoiceDocumentModel } from "@/components/create-invoice/invoiceDocumentModel";
 import {
   buildInvoiceEmailBody,
   buildInvoiceEmailSubject,
@@ -35,7 +33,6 @@ export function SendInvoiceModal({ open, onClose, invoice, onSent }: SendInvoice
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const client = clients?.find((c) => c.id === invoice.clientId);
-  const documentModel = buildInvoiceDocumentModel({ invoice, client, business });
   const { total } = computeInvoiceTotals(invoice);
   const isResend = Boolean(invoice.sentAt);
 
@@ -76,10 +73,6 @@ export function SendInvoiceModal({ open, onClose, invoice, onSent }: SendInvoice
   }
 
   return (
-    <>
-      <div className="pointer-events-none fixed -left-[100000px] top-0 w-[794px]" aria-hidden="true">
-        <InvoiceDocumentRenderer model={documentModel} />
-      </div>
       <Modal
         open={open}
         onClose={onClose}
@@ -102,6 +95,5 @@ export function SendInvoiceModal({ open, onClose, invoice, onSent }: SendInvoice
         </p>
         {errorMessage && <p role="alert" className="mt-3 rounded-md border border-overdue/20 bg-overdue-bg px-3 py-2 text-xs text-overdue">{errorMessage}</p>}
       </Modal>
-    </>
   );
 }

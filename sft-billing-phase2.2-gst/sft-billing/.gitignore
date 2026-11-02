@@ -1,10 +1,46 @@
-node_modules
-dist
-dist-ssr
+node_modules/
+dist/
+dist-ssr/
+coverage/
+target/
+src-tauri/target/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
 *.local
 
-# Tauri (added in Phase 7)
-src-tauri/target
-src-tauri/Cargo.lock
+# Local and runtime databases. The approved first-run seed is intentional.
+*.db
+!src-tauri/sft_billing_initial.db
+*.db-shm
+*.db-wal
+*.sqlite*
+
+# Build-generated executables. Keep the Windows sidecar required by Tauri.
+*.exe
+!src-tauri/sft-billing-backend-x86_64-pc-windows-msvc.exe
+*.dll
+*.pdb
+
+# Python environments and generated artifacts
+.venv/
+venv/
+
+# Local exports, audit output, and one-off editing/check scripts
+SFT-Invoice-INV-1001.pdf
+SFT_BILLING_ERROR_AUDIT.md
+build_check.bat
+check_braces.py
+check_file.cjs
+fix_*.py
+temp_*
+tsc_output.txt
+update-logo-datauri.*
 
 .DS_Store

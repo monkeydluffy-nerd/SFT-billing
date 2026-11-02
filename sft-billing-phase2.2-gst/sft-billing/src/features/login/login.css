@@ -1,0 +1,179 @@
+/* SFT Billing login: plain CSS, scoped with the .sft-login prefix. No Tailwind needed. */
+.sft-login {
+  --sl-forest-900: #0F2620;
+  --sl-forest-800: #17372C;
+  --sl-button: #14312A;
+  --sl-button-hover: #1B3F35;
+  --sl-gold: #B8935A;
+  --sl-champagne: #D8BE8F;
+  --sl-ivory: #F7F4EE;
+  --sl-ink: #16201B;
+  --sl-muted: #5E655F;
+  --sl-border: #D9D4C8;
+  --sl-error: #9B2C2C;
+  --sl-sans: "Inter Variable", Inter, system-ui, sans-serif;
+  --sl-serif: "Fraunces Variable", Fraunces, Georgia, serif;
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 650px;
+  box-sizing: border-box;
+  font-family: var(--sl-sans);
+  background: var(--sl-ivory);
+}
+.sft-login *, .sft-login *::before, .sft-login *::after { box-sizing: border-box; }
+
+/* Left: brand panel */
+.sft-login__brand {
+  flex: 0 0 46%;
+  position: relative;
+  overflow: hidden;
+  padding: 48px 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--sl-ivory);
+  background:
+    radial-gradient(520px 360px at 12% 100%, rgba(184, 147, 90, .20), transparent 70%),
+    linear-gradient(160deg, var(--sl-forest-800), var(--sl-forest-900));
+}
+.sft-login__grid {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(247, 244, 238, .04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(247, 244, 238, .04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.sft-login__lockup { position: relative; display: flex; align-items: center; gap: 16px; }
+.sft-login__logo { width: 220px; height: auto; min-height: 68px; object-fit: contain; }
+.sft-login__company { font-size: 13px; font-weight: 600; letter-spacing: .24em; }
+.sft-login__hero { position: relative; }
+.sft-login__drawing { display: block; width: 100%; max-width: 520px; margin-bottom: 40px; }
+.sft-login__eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .24em; color: var(--sl-champagne); }
+.sft-login__headline {
+  margin: 14px 0 0; font-family: var(--sl-serif); font-weight: 400;
+  font-size: 46px; line-height: 1.1; letter-spacing: -.01em;
+}
+.sft-login__rule { width: 56px; height: 1px; background: var(--sl-gold); margin: 26px 0; }
+.sft-login__lede { margin: 0; max-width: 340px; font-size: 15px; line-height: 1.6; color: rgba(247, 244, 238, .78); }
+.sft-login__tagline { position: relative; font-size: 11px; letter-spacing: .2em; color: var(--sl-champagne); }
+
+/* Right: form panel */
+.sft-login__panel { position: relative; flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 140px 32px 48px; }
+.sft-login__app-logo {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(21, 55, 44, 0.85), rgba(15, 38, 32, 0.9));
+  border: 1px solid rgba(216, 190, 143, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(216, 190, 143, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+.sft-login__app-logo img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+}
+.sft-login__card { width: 100%; max-width: 392px; animation: sft-rise .6s ease-out both; }
+.sft-login__title { margin: 0; font-family: var(--sl-serif); font-weight: 400; font-size: 38px; letter-spacing: -.01em; color: var(--sl-ink); }
+.sft-login__subtitle { margin: 10px 0 36px; font-size: 15px; color: var(--sl-muted); }
+.sft-login__label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500; color: var(--sl-ink); }
+.sft-login__label--password { margin: 22px 0 8px; }
+.sft-login__input {
+  width: 100%; height: 50px; padding: 0 16px;
+  font: 400 15px var(--sl-sans); color: var(--sl-ink);
+  background: #fff; border: 1px solid var(--sl-border); border-radius: 8px; outline: none;
+}
+.sft-login__input::placeholder { color: #757575; }
+.sft-login__input:focus { border-color: var(--sl-gold); outline: 3px solid rgba(184, 147, 90, .25); outline-offset: 0; }
+.sft-login__password { position: relative; }
+.sft-login__input--password { padding-right: 48px; }
+.sft-login__toggle {
+  position: absolute; right: 4px; top: 3px; width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 6px; background: transparent; color: var(--sl-muted); cursor: pointer;
+}
+.sft-login__toggle:focus-visible { outline: 2px solid var(--sl-gold); }
+.sft-login__error { margin: 14px 0 0; font-size: 13px; color: var(--sl-error); animation: sft-shake .25s ease-out; }
+.sft-login__submit {
+  position: relative; overflow: hidden; margin-top: 32px; width: 100%; height: 54px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  border: 0; border-radius: 8px; background: var(--sl-button); color: var(--sl-ivory);
+  font: 600 15px var(--sl-sans); letter-spacing: .04em; cursor: pointer;
+  box-shadow: inset 0 1px 0 var(--sl-gold), 0 8px 20px rgba(20, 49, 42, .18);
+}
+.sft-login__submit:hover { background: var(--sl-button-hover); }
+.sft-login__submit:focus-visible { outline: 3px solid rgba(184, 147, 90, .5); outline-offset: 2px; }
+.sft-login__submit:disabled { cursor: progress; opacity: .9; }
+.sft-login__submit[aria-busy="true"]::after {
+  content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 40%;
+  background: var(--sl-gold); animation: sft-load 1.1s ease-in-out infinite;
+}
+.sft-login__footer { margin: 36px 0 0; text-align: center; font-size: 12px; color: var(--sl-muted); }
+
+/* Forgot password link */
+.sft-login__forgot { margin-top: 16px; text-align: center; }
+.sft-login__forgot-link {
+  border: 0; background: transparent; color: var(--sl-muted); font: 500 13px var(--sl-sans);
+  cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+}
+.sft-login__forgot-link:hover { color: var(--sl-ink); }
+.sft-login__forgot-link:focus-visible { outline: 2px solid var(--sl-gold); outline-offset: 2px; border-radius: 2px; }
+.sft-login__forgot-link:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Motion */
+.sft-login__draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: sft-draw 1.8s ease-out .3s forwards; }
+@keyframes sft-draw { to { stroke-dashoffset: 0; } }
+@keyframes sft-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes sft-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+@keyframes sft-load { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@media (prefers-reduced-motion: reduce) {
+  .sft-login__draw { animation: none; stroke-dashoffset: 0; }
+  .sft-login__card, .sft-login__error { animation: none; }
+  .sft-login__submit[aria-busy="true"]::after { animation: none; width: 100%; }
+}
+
+/* Smaller windows */
+@media (max-width: 1100px) {
+  .sft-login__brand { flex-basis: 40%; padding: 40px 36px; }
+  .sft-login__headline { font-size: 38px; }
+  .sft-login__logo { width: 180px; min-height: 56px; }
+  .sft-login__app-logo { width: 72px; height: 72px; top: 20px; right: 28px; }
+  .sft-login__app-logo img { width: 50px; height: 50px; }
+}
+@media (max-width: 900px) {
+  .sft-login { flex-direction: column; height: auto; min-height: 100dvh; }
+  .sft-login__brand { flex: 0 0 auto; min-height: 140px; padding: 24px 32px; justify-content: center; gap: 14px; }
+  .sft-login__hero { display: none; }
+  .sft-login__logo { width: 160px; min-height: 50px; }
+  .sft-login__panel { padding: 32px 24px; }
+  .sft-login__app-logo { 
+    position: static; 
+    width: 64px; 
+    height: 64px; 
+    margin: 0 auto 16px; 
+    border-radius: 12px;
+  }
+  .sft-login__app-logo img { width: 44px; height: 44px; }
+}
+@media (max-height: 700px) {
+  .sft-login__brand { padding-block: 28px; }
+  .sft-login__drawing { max-width: 400px; margin-bottom: 24px; }
+  .sft-login__headline { font-size: 38px; }
+  .sft-login__panel { padding-block: 24px; }
+  .sft-login__subtitle { margin-bottom: 24px; }
+  .sft-login__submit { margin-top: 24px; }
+  .sft-login__footer { margin-top: 24px; }
+}

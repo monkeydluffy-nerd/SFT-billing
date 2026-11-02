@@ -1,26 +1,21 @@
-import { useMemo } from "react";
-import { AlertTriangle, ArrowLeft, Inbox, Printer } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowLeft, Inbox, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Skeleton } from "@/components/shared/SkeletonLoader";
-import { StatusChip } from "@/components/shared/StatusChip";
-import { LedgerStatusChip } from "@/components/shared/LedgerStatusChip";
-import { Button } from "@/components/shared/Button";
-import { DownloadInvoiceButton } from "@/components/create-invoice/DownloadInvoiceButton";
-import { InvoiceFileActions } from "@/components/create-invoice/InvoiceFileActions";
-import { InvoiceDocumentRenderer } from "@/components/create-invoice/InvoiceDocumentRenderer";
-import { buildInvoiceDocumentModel } from "@/components/create-invoice/invoiceDocumentModel";
-import { InvoiceDetailActions } from "@/components/invoices/InvoiceDetailActions";
+import { InvoiceHeader } from "@/components/invoices/InvoiceHeader";
+import { ActionToolbar } from "@/components/invoices/ActionToolbar";
+import { InvoicePreview } from "@/components/invoices/InvoicePreview";
+import { InvoiceSummary } from "@/components/invoices/InvoiceSummary";
 import { PaymentHistoryList } from "@/components/invoices/PaymentHistoryList";
 import { useInvoices } from "@/hooks/useInvoices";
 import { usePayments } from "@/hooks/usePayments";
 import { useClients } from "@/hooks/useClients";
 import { useBusinessProfile } from "@/hooks/useBusinessProfile";
 import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
-import { getInvoiceLedgerStatus } from "@/lib/invoiceMath";
-import { getClientName } from "@/lib/clientLookup";
-import { formatCurrency } from "@/lib/formatters";
+import { computeInvoiceTotals, getInvoiceLedgerStatus } from "@/lib/invoiceMath";
 
+/** Invoice detail shows billing actions and ledger information, not a separate invoice rendering. */
 export function InvoicePage() {
   const {
     data: invoices,
@@ -35,33 +30,26 @@ export function InvoicePage() {
     reload: reloadPayments,
   } = usePayments();
   const { data: clients, loading: clientsLoading, error: clientsError, reload: reloadClients } = useClients();
-  const {
-    data: business,
-    loading: businessLoading,
-    error: businessError,
-    reload: reloadBusiness,
-  } = useBusinessProfile();
-  const { selectedInvoiceId, goToInvoices, openCreateInvoice, navigateToPaymentReceipt, navigateToInvoiceDetail } = useWorkspaceStore();
+  const { data: business } = useBusinessProfile();
+  const { selectedInvoiceId, goToInvoices, openCreateInvoice, navigateToPaymentReceipt } = useWorkspaceStore();
 
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+
+  // The selected stable id is the only resolution key. This deliberately does
+  // not fall back to a first item, filtered invoice list, or display number.
   const invoice = invoices?.find((candidate) => candidate.id === selectedInvoiceId);
   const invoicePayments = useMemo(
     () => (payments ?? []).filter((payment) => payment.invoiceId === selectedInvoiceId),
     [payments, selectedInvoiceId],
   );
 
-  const loading = invoicesLoading || paymentsLoading || clientsLoading || businessLoading;
-  const error = invoicesError ?? paymentsError ?? clientsError ?? businessError;
+  const loading = invoicesLoading || paymentsLoading || clientsLoading;
+  const error = invoicesError ?? paymentsError ?? clientsError;
 
   function retryLoad() {
     reloadInvoices();
     reloadPayments();
     reloadClients();
-    reloadBusiness();
-  }
-
-  function handleUploaded(saved: { id: string }) {
-    reloadInvoices();
-    navigateToInvoiceDetail(saved.id);
   }
 
   if (error) {
@@ -70,13 +58,30 @@ export function InvoicePage() {
         <PageHeader
           title="Invoice"
           action={
-            <button type="button" onClick={() => goToInvoices()} className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent">
+            <button
+              type="button"
+              onClick={() => goToInvoices()}
+              className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent transition-colors duration-micro hover:border-accent/40 hover:bg-accent/[0.14]"
+            >
               <ArrowLeft size={14} /> Back to invoices
             </button>
           }
         />
         <div className="px-10 py-10">
-          <EmptyState icon={AlertTriangle} title="Couldn't load invoice" description={error.message} action={<button type="button" onClick={retryLoad} className="text-sm font-medium text-accent hover:underline">Retry</button>} />
+          <EmptyState
+            icon={AlertTriangle}
+            title="Couldn't load invoice"
+            description={error.message}
+            action={
+              <button
+                type="button"
+                onClick={retryLoad}
+                className="text-sm font-medium text-accent hover:underline"
+              >
+                Retry
+              </button>
+            }
+          />
         </div>
       </div>
     );
@@ -101,47 +106,55 @@ export function InvoicePage() {
         <PageHeader
           title="Invoice"
           action={
-            <button type="button" onClick={() => goToInvoices()} className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent">
+            <button
+              type="button"
+              onClick={() => goToInvoices()}
+              className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent transition-colors duration-micro hover:border-accent/40 hover:bg-accent/[0.14]"
+            >
               <ArrowLeft size={14} /> Back to invoices
             </button>
           }
         />
         <div className="px-10 py-10">
           <EmptyState icon={Inbox} title="Invoice not found" description="This invoice may have been removed." />
-          <div className="mt-6 flex justify-center">
-            <InvoiceFileActions onUploaded={handleUploaded} />
-          </div>
         </div>
       </div>
     );
   }
 
-  const client = clients?.find((candidate) => candidate.id === invoice.clientId);
-  const model = buildInvoiceDocumentModel({ invoice, client, business });
   const ledgerInfo = invoice.isDraft ? null : getInvoiceLedgerStatus(invoice, invoicePayments);
+  const invoiceTotals = computeInvoiceTotals(invoice);
+  const client = clients?.find((c) => c.id === invoice.clientId);
 
   return (
-    <div>
+    <div className="flex flex-col h-full">
       <div className="print:hidden">
         <PageHeader
-          title={invoice.number}
-          subtitle={getClientName(clients, invoice.clientId)}
+          title="Invoice"
           action={
-            <button type="button" onClick={() => goToInvoices()} className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent">
+            <button
+              type="button"
+              onClick={() => goToInvoices()}
+              className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent transition-colors duration-micro hover:border-accent/40 hover:bg-accent/[0.14]"
+            >
               <ArrowLeft size={14} /> Back to invoices
             </button>
           }
         />
       </div>
 
-      <div className="space-y-8 px-10 py-7 print:space-y-0 print:px-0 print:py-0">
-        <div className="flex flex-wrap items-center justify-end gap-2 print:hidden">
-          <Button variant="secondary" onClick={() => window.print()}>
-            <Printer size={14} aria-hidden /> Print / PDF
-          </Button>
-          <DownloadInvoiceButton invoice={invoice} client={client} business={business} />
-          <InvoiceFileActions invoice={invoice} onUploaded={handleUploaded} />
-          <InvoiceDetailActions
+      <div className="flex-1 overflow-y-auto px-10 py-7 print:px-0 print:py-0 space-y-6">
+        {/* Invoice Header */}
+        <InvoiceHeader
+          invoice={invoice}
+          client={client}
+          ledgerInfo={ledgerInfo}
+          invoiceTotals={invoiceTotals}
+        />
+
+        {/* Action Toolbar */}
+        <div className="print:hidden">
+          <ActionToolbar
             invoice={invoice}
             ledgerInfo={ledgerInfo}
             onContinueEditing={() =>
@@ -165,27 +178,29 @@ export function InvoicePage() {
               reloadInvoices();
               reloadPayments();
             }}
+            onPrint={() => window.print()}
+            onExpandPreview={() => setIsPreviewExpanded((prev) => !prev)}
+            isPreviewExpanded={isPreviewExpanded}
           />
         </div>
 
-        <section aria-label="Invoice document" data-testid="invoice-document" className="invoice-print-region flex justify-center print:block">
-          <InvoiceDocumentRenderer model={model} />
-        </section>
+        {/* Invoice Preview */}
+        <InvoicePreview
+          invoice={invoice}
+          client={client}
+          business={business}
+          isExpanded={isPreviewExpanded}
+        />
 
-        <section aria-label="Invoice ledger summary" className="flex flex-wrap items-center gap-4 rounded-lg border border-border p-5 print:hidden">
-          <div>
-            {invoice.isDraft ? (
-              <StatusChip info={{ status: "draft", daysOverdue: 0, severity: null }} />
-            ) : (
-              ledgerInfo && <LedgerStatusChip info={ledgerInfo} />
-            )}
-          </div>
-          <div className="ml-auto text-right">
-            <p className="text-xs font-medium text-ink-faint">Invoice total</p>
-            <p className="font-tabular text-xl text-ink">{formatCurrency(model.totals.total)}</p>
-          </div>
-        </section>
+        {/* Invoice Summary and Details */}
+        <InvoiceSummary
+          invoice={invoice}
+          client={client}
+          ledgerInfo={ledgerInfo}
+          invoicePayments={invoicePayments}
+        />
 
+        {/* Payment History */}
         <section aria-label="Payment history" className="print:hidden">
           <p className="mb-3 text-sm font-medium text-ink">Payment history</p>
           <PaymentHistoryList payments={invoicePayments} onOpenReceipt={navigateToPaymentReceipt} />

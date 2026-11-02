@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 220" width="520" height="220" role="img" aria-label="Dimension lines and labels, 10 by 70">
+  <g fill="none" stroke="#D8BE8F" stroke-width="1.2" stroke-linejoin="round" stroke-opacity=".6">
+    <path id="length-dimension" d="M96 132V190M446 120V190M96 182H446M96 176V188M446 176V188"/>
+    <path id="diameter-dimension" d="M446 88H486M446 132H486M478 88V132M473 88H483M473 132H483"/>
+  </g>
+  <g id="labels" font-family="Inter, 'Inter Variable', sans-serif" font-size="12" fill="#D8BE8F" letter-spacing=".08em">
+    <text id="label-length" x="271" y="174" text-anchor="middle">70</text>
+    <text id="label-diameter" x="492" y="114">Ø10</text>
+  </g>
+</svg>

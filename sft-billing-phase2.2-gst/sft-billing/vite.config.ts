@@ -22,11 +22,22 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    // Prevent Vite from watching Tauri build artifacts (causes EBUSY crash)
+    watch: {
+      ignored: ["**/src-tauri/target/**", "**/src-tauri/*.rs", "**/src-tauri/sidecar/**"],
+    },
   },
   build: {
     outDir: "dist",
     // Tauri on Windows bundles a Chromium-based WebView2 runtime, so we can
     // target a modern baseline without legacy transpilation.
     target: "es2021",
+    rollupOptions: {
+      external: ["@tauri-apps/api"],
+    },
+  },
+  // Prevent @tauri-apps/api from being pre-bundled (it's external in Tauri)
+  optimizeDeps: {
+    exclude: ["@tauri-apps/api"],
   },
 });

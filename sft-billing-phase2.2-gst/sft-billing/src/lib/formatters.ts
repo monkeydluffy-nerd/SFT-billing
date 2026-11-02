@@ -61,3 +61,9 @@ export function formatPercent(value: number, withSign = true): string {
   const sign = withSign && value > 0 ? "+" : "";
   return `${sign}${value.toFixed(1)}%`;
 }
+
+/** Extract a city/locality name from a billing address like "TIRUVALLUR -600072". */
+export function extractCity(address: string): string {
+  const match = address.match(/([A-Za-z\s]+?)\s*-/);
+  return match ? match[1].trim() : "";
+}

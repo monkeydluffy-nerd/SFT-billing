@@ -24,6 +24,47 @@
   ::selection {
     @apply bg-accent/20;
   }
+
+  /* Responsive utilities for desktop app */
+  @layer utilities {
+    /* Ensure app shell works at all window sizes */
+    .app-shell-root {
+      @apply flex h-screen w-full overflow-hidden;
+    }
+
+    .app-shell-content {
+      @apply flex-1 min-w-0 overflow-y-auto;
+    }
+
+    /* Responsive table container */
+    .table-responsive {
+      @apply overflow-x-auto;
+    }
+
+    .table-responsive > * {
+      @apply min-w-[600px];
+    }
+
+    /* Responsive page header */
+    .page-header-responsive {
+      @apply flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6 border-b border-border px-4 sm:px-10 py-4 sm:py-6;
+    }
+
+    /* Responsive summary grid */
+    .summary-grid {
+      @apply grid grid-cols-1 gap-4 sm:grid-cols-3 items-stretch;
+    }
+
+    /* Responsive search/filter bar */
+    .filter-bar {
+      @apply flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between flex-wrap;
+    }
+
+    /* Responsive content padding */
+    .content-padding {
+      @apply px-4 sm:px-10;
+    }
+  }
 }
 
 @media print {

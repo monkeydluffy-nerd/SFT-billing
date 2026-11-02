@@ -1,4 +1,10 @@
-# Wiring the invoice into your stack
+# Legacy invoice prototype (not used by SFT Billing)
+
+The application does not load this standalone prototype. Current invoice
+downloads are generated from `backend/app/excel/templates/Surfine_Bill_format.xlsx`;
+PDF downloads are converted from that workbook by the backend.
+
+The wiring notes below are historical and do not describe the active billing app.
 
 ## 1. Drop-in files
 

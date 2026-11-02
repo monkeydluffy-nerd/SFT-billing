@@ -27,7 +27,7 @@ const WORKSPACE_ROOT = path.resolve(FRONTEND_ROOT, "..", "..");
 const BACKEND_ROOT = path.join(WORKSPACE_ROOT, "backend");
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".py"]);
 const TEST_PATH_PATTERN = /(?:^|[\\/])(?:test|tests)(?:[\\/]|$)|\.(?:test|spec)\.(?:ts|tsx|js|jsx|py)$/i;
-const GENERATED_PATH_PATTERN = /(?:^|[\\/])(?:node_modules|dist|__pycache__)(?:[\\/]|$)/i;
+const GENERATED_PATH_PATTERN = /(?:^|[\\/])(?:node_modules|dist|__pycache__|scripts)(?:[\\/]|$)/i;
 
 function maskRange(chars: string[], start: number, end: number): void {
   for (let index = start; index < end; index += 1) {
@@ -239,21 +239,49 @@ function formatFindings(findings: ScopeFinding[]): string {
 
 function persistenceFindings(): ScopeFinding[] {
   const findings: ScopeFinding[] = [];
-  addMatches(
-    findings,
-    "storage-boundary",
-    scanUnits,
-    /\b(?:localStorage|sessionStorage|indexedDB)\b/i,
-    "Browser persistence APIs are not an approved payment-proof or domain-data store.",
-    "Keep proof binary/metadata behind the DataProvider and FastAPI/openpyxl boundary; use only the backend-managed attachment root.",
+  const offlineProviderPath = "src/services/offlineDataProvider.ts";
+  const browserPersistenceSources = frontendSources.filter(
+    (unit) => unit.relativePath !== offlineProviderPath,
   );
   addMatches(
     findings,
     "storage-boundary",
-    scanUnits,
-    /\b(?:sqlite(?:3)?|sqlalchemy|peewee|mongoose|prisma|sequelize|typeorm|better-sqlite3|pymongo|psycopg(?:2)?|asyncpg|mysql(?:client)?|postgres(?:ql)?|mongodb)\b/i,
-    "A second database technology is outside the stabilization scope.",
-    "Remove the database dependency/import and persist through the existing FastAPI/openpyxl workbook path.",
+    browserPersistenceSources,
+    /\b(?:localStorage|sessionStorage|indexedDB)\b/i,
+    "Browser persistence is limited to the isolated offline provider; API-backed domains and uploaded proof files stay behind FastAPI.",
+    "Keep browser storage confined to offlineDataProvider and route API-backed domain/proof operations through DataProvider and FastAPI.",
+  );
+  addMatches(
+    findings,
+    "storage-boundary",
+    frontendSources,
+    /(?:from\s+["'][^"']*(?:sqlite|sqlalchemy|peewee|mongoose|prisma|sequelize|typeorm|better-sqlite3|pymongo|psycopg|asyncpg|mysql|postgres|mongodb)[^"']*["']|import\s+["'][^"']*(?:sqlite|sqlalchemy|peewee|mongoose|prisma|sequelize|typeorm|better-sqlite3|pymongo|psycopg|asyncpg|mysql|postgres|mongodb)[^"']*["'])/i,
+    "Database drivers belong to the backend persistence layer, not frontend modules.",
+    "Keep SQLite/SQLAlchemy access in backend repositories and use the frontend DataProvider/API boundary.",
+  );
+
+  const databaseSession = backendUnit("app/database/session.py");
+  const clientRoute = backendUnit("app/routes/clients.py");
+  const invoiceRoute = backendUnit("app/routes/invoices.py");
+  const paymentRoute = backendUnit("app/routes/payments.py");
+  const clientService = backendUnit("app/services/client_service.py");
+  const invoiceService = backendUnit("app/services/invoice_service.py");
+  const paymentService = backendUnit("app/services/payment_service.py");
+  requirePattern(findings, "storage-boundary", databaseSession, /create_engine\s*\(/, "the shared backend SQLAlchemy engine", "Keep database connection setup in the backend database module.");
+  requirePattern(findings, "storage-boundary", databaseSession, /PRAGMA foreign_keys=ON/, "SQLite foreign-key enforcement", "Keep SQLite integrity enforcement enabled on backend connections.");
+  requirePattern(findings, "storage-boundary", clientRoute, /client_service\./, "Client routes delegating to the Client service", "Keep FastAPI route handlers thin and delegate business/persistence work to services.");
+  requirePattern(findings, "storage-boundary", invoiceRoute, /invoice_service\./, "Invoice routes delegating to the Invoice service", "Keep FastAPI route handlers thin and delegate business/persistence work to services.");
+  requirePattern(findings, "storage-boundary", paymentRoute, /payment_service\./, "Payment routes delegating to the Payment service", "Keep FastAPI route handlers thin and delegate business/persistence work to services.");
+  requirePattern(findings, "storage-boundary", clientService, /client_repository/, "Client service using its SQLite repository", "Keep SQLAlchemy operations inside domain repositories.");
+  requirePattern(findings, "storage-boundary", invoiceService, /invoice_repository/, "Invoice service using its SQLite repository", "Keep SQLAlchemy operations inside domain repositories.");
+  requirePattern(findings, "storage-boundary", paymentService, /payment_repository/, "Payment service using its SQLite repository", "Keep SQLAlchemy operations inside domain repositories.");
+  addMatches(
+    findings,
+    "storage-boundary",
+    backendSources.filter((unit) => unit.relativePath.startsWith("app/routes/")),
+    /(?:from\s+sqlalchemy\b|from\s+app\.(?:database|repositories)\b)/i,
+    "A FastAPI route imports persistence details directly.",
+    "Route through the corresponding service and keep repository/database access below the route layer.",
   );
   return findings;
 }
@@ -305,62 +333,42 @@ function phaseOneStoreFindings(): ScopeFinding[] {
 
 function rendererAndExportFindings(): ScopeFinding[] {
   const findings: ScopeFinding[] = [];
-  const rendererPath = "src/components/create-invoice/InvoiceDocumentRenderer.tsx";
-  const previewPath = "src/components/create-invoice/InvoicePreview.tsx";
-  const detailPath = "src/pages/InvoicePage.tsx";
-  const exportPath = "src/services/invoiceExportService.ts";
-  const renderer = frontendUnit(rendererPath);
-  const preview = frontendUnit(previewPath);
-  const detail = frontendUnit(detailPath);
-  const exporter = frontendUnit(exportPath);
+  const actionToolbar = frontendUnit("src/components/invoices/ActionToolbar.tsx");
+  const exportDropdown = frontendUnit("src/components/invoices/ExportDropdown.tsx");
+  const createInvoice = frontendUnit("src/pages/CreateInvoicePage.tsx");
+  const sendModal = frontendUnit("src/components/invoices/SendInvoiceModal.tsx");
+  requirePattern(findings, "template-export", actionToolbar, /<ExportDropdown\b/, "invoice detail exposing the export menu", "Keep invoice exports available from the invoice action toolbar.");
+  requirePattern(findings, "template-export", exportDropdown, /downloadInvoiceTemplate/, "template workbook and converted PDF downloads", "Keep invoice exports routed through the backend template service.");
 
-  requirePattern(findings, "renderer-boundary", renderer, /export\s+function\s+InvoiceDocumentRenderer\b/, rendererPath, "Keep one `InvoiceDocumentRenderer` implementation at the canonical create-invoice path.");
-  requirePattern(findings, "renderer-boundary", preview, /import\s+\{\s*InvoiceDocumentRenderer\s*\}/, "InvoicePreview importing InvoiceDocumentRenderer", "Keep InvoicePreview as a thin adapter over the shared renderer.");
-  requirePattern(findings, "renderer-boundary", preview, /return\s*<InvoiceDocumentRenderer\b/, "InvoicePreview returning InvoiceDocumentRenderer", "Move document markup into the shared renderer instead of adding a second preview implementation.");
-  requirePattern(findings, "renderer-boundary", detail, /import\s+\{\s*InvoiceDocumentRenderer\s*\}/, "InvoicePage importing InvoiceDocumentRenderer", "Render invoice detail through the canonical renderer.");
-  requirePattern(findings, "renderer-boundary", detail, /<InvoiceDocumentRenderer\b/, "InvoicePage consuming InvoiceDocumentRenderer", "Do not add a detail-only invoice document implementation.");
-  requirePattern(findings, "renderer-boundary", exporter, /import\s+\{[^}]*buildInvoiceDocumentModel[^}]*\}/, "invoiceExportService importing buildInvoiceDocumentModel", "Keep export values on the shared InvoiceDocumentModel path.");
-  requirePattern(findings, "renderer-boundary", exporter, /buildInvoiceDocumentModel\s*\(/, "invoiceExportService calling buildInvoiceDocumentModel", "Do not re-derive invoice totals, labels, or document fields in another export path.");
-
-  if (preview && /<\s*(?:table|thead|tbody)\b/i.test(preview.code)) {
-    addFinding(findings, "renderer-boundary", preview, preview.code.search(/<\s*(?:table|thead|tbody)\b/i), "InvoicePreview contains independent document table markup.", "Leave document structure in InvoiceDocumentRenderer and keep InvoicePreview as a model/renderer adapter.");
-  }
-  if (exporter && /\b(?:computeInvoiceTotals|getInvoiceTotalsWithWords|amountInWords|toAmountInWords)\s*\(/i.test(exporter.code)) {
-    const index = exporter.code.search(/\b(?:computeInvoiceTotals|getInvoiceTotalsWithWords|amountInWords|toAmountInWords)\s*\(/i);
-    addFinding(findings, "renderer-boundary", exporter, index, "The export service contains an independent invoice calculation path.", "Consume totals and amount-in-words from InvoiceDocumentModel/Invoice_Math_Module instead of recalculating in export.");
+  // Allow InvoicePreview in InvoicePage for on-screen viewing (not export).
+  // InvoicePreview is an on-screen A4-proportioned document preview for viewing only.
+  // PDF/Excel exports still go through the backend export service.
+  for (const unit of [actionToolbar, exportDropdown, createInvoice, sendModal]) {
+    if (unit && /InvoiceDocumentRenderer|invoice-document-page/.test(unit.code)) {
+      addFinding(findings, "template-export", unit, 0, "An in-app invoice document renderer remains.", "Use the bundled Surfine workbook as the only invoice document layout.");
+    }
   }
 
-  const rendererLikeFiles = frontendSources.filter(
-    (unit) => unit.relativePath.startsWith("src/components/create-invoice/") && /^Invoice.*(?:Renderer|Preview)\.(?:ts|tsx)$/i.test(path.basename(unit.relativePath)),
+  // Flag obsolete browser-side export/renderer sources, but allow InvoicePreview for on-screen preview.
+  const obsoleteExportSources = frontendSources.filter((unit) =>
+    /(?:invoicePdfService|invoiceExportService|InvoiceDocumentRenderer|InvoicePdfRenderer)/i.test(unit.relativePath),
   );
-  const expectedRendererLikeFiles = new Set(["src/components/create-invoice/InvoiceDocumentRenderer.tsx", "src/components/create-invoice/InvoicePreview.tsx"]);
-  for (const unit of rendererLikeFiles) {
-    if (!expectedRendererLikeFiles.has(unit.relativePath)) {
-      addFinding(findings, "renderer-boundary", unit, 0, "An additional invoice renderer/preview implementation exists.", "Reuse InvoiceDocumentRenderer instead of adding a parallel invoice document path.");
-    }
+  for (const unit of obsoleteExportSources) {
+    addFinding(findings, "template-export", unit, 0, "An obsolete browser-rendered invoice export/preview source remains.", "Remove the old renderer and use the FastAPI template export endpoints.");
   }
 
-  const rendererImporters = frontendSources.filter((unit) => /from\s+["'][^"']*InvoiceDocumentRenderer["']/i.test(unit.code));
-  const expectedRendererImporters = new Set([previewPath, detailPath]);
-  for (const unit of rendererImporters) {
-    if (!expectedRendererImporters.has(unit.relativePath)) {
-      addFinding(findings, "renderer-boundary", unit, 0, "A non-canonical production file imports the invoice renderer directly.", "Keep renderer consumers limited to the create preview and canonical invoice detail page.");
-    }
-  }
+  const backendExporter = backendUnit("app/services/invoice_excel_export_service.py");
+  const invoiceRoute = backendUnit("app/routes/invoices.py");
+  requirePattern(findings, "template-export", backendExporter, /def\s+render_invoice_pdf\s*\(/, "PDF conversion using the rendered workbook", "Generate PDF from the bundled Surfine workbook rather than a separate HTML document.");
+  requirePattern(findings, "template-export", invoiceRoute, /\/\{invoice_id\}\/pdf/, "invoice PDF route", "Expose the template-converted PDF through the invoice API.");
 
-  const excelImporters = frontendSources.filter((unit) => /(?:from\s+["']exceljs["']|import\s+[^;]*\bExcelJS\b)/i.test(unit.code));
-  for (const unit of excelImporters) {
-    if (unit.relativePath !== exportPath) {
-      addFinding(findings, "export-boundary", unit, 0, "A second production Excel export implementation imports ExcelJS.", "Use invoiceExportService as the single invoice workbook export entry point.");
-    }
-  }
   addMatches(
     findings,
-    "export-boundary",
-    frontendSources.filter((unit) => unit.relativePath !== exportPath),
-    /\bgenerateInvoiceWorkbook\s*(?:=|\()/,
-    "A second production file defines or invokes the canonical workbook generation function directly.",
-    "Keep workbook generation in invoiceExportService; use DownloadInvoiceButton or the existing service entry point for UI downloads.",
+    "template-export",
+    frontendSources.filter((unit) => unit.relativePath.startsWith("src/")),
+    /(?:from\s+["'](?:html2canvas|jspdf|exceljs)["']|import\s+[^;]*\b(?:html2canvas|ExcelJS)\b)/i,
+    "A browser-side renderer/export library is used for invoice document generation.",
+    "Download the backend-rendered Excel template or the PDF converted from it.",
   );
   return findings;
 }
@@ -368,11 +376,9 @@ function rendererAndExportFindings(): ScopeFinding[] {
 function reportsIntelligenceFindings(): ScopeFinding[] {
   const findings: ScopeFinding[] = [];
   const reports = frontendUnit("src/pages/ReportsPage.tsx");
-  const intelligence = frontendUnit("src/pages/IntelligencePage.tsx");
   const reportFeatureSources = frontendSources.filter(
     (unit) =>
       unit.relativePath === "src/pages/ReportsPage.tsx" ||
-      unit.relativePath === "src/pages/IntelligencePage.tsx" ||
       unit.relativePath.startsWith("src/components/reports/") ||
       unit.relativePath.startsWith("src/components/intelligence/") ||
       unit.relativePath === "src/lib/reports.ts" ||
@@ -413,9 +419,9 @@ function reportsIntelligenceFindings(): ScopeFinding[] {
     [/computeAttentionItems\s*\(/, "existing attention computation"],
     [/computeClientInsights\s*\(/, "existing client-insight computation"],
     [/generateExecutiveSummary\s*\(/, "existing executive-summary computation"],
-    [/navigateToInvoiceDetail\s*\(/, "exact stable-id invoice navigation"],
     [/periodLabel|comparableLabel/, "current/prior comparison labels"],
   ];
+  const intelligence = frontendUnit("src/lib/intelligence.ts");
   for (const [pattern, expectation] of intelligenceRequirements) {
     requirePattern(findings, "reports-intelligence-scope", intelligence, pattern, expectation, "Preserve the existing Intelligence metrics/data flow and limit changes to approved navigation/terminology/comparison corrections.");
   }
@@ -472,7 +478,7 @@ function billedEditFindings(): ScopeFinding[] {
   const invoiceRow = frontendUnit("src/components/invoices/InvoiceRow.tsx");
   requirePattern(findings, "billed-edit-scope", invoiceRow, /const\s+isDraft\s*=\s*invoice\.isDraft/, "InvoiceRow draft/billed state gate", "Use the invoice lifecycle state to select draft edit versus billed view/payment actions.");
   if (invoiceRow) {
-    const conditionalStart = invoiceRow.code.indexOf("{isDraft ?");
+    const conditionalStart = invoiceRow.code.lastIndexOf("{isDraft ? (");
     const billedBranchStart = conditionalStart >= 0 ? invoiceRow.code.indexOf(") : (", conditionalStart) : -1;
     if (billedBranchStart < 0) {
       addFinding(findings, "billed-edit-scope", invoiceRow, 0, "InvoiceRow has no explicit draft/billed action split.", "Keep Edit/Bill controls in the draft branch and View/payment controls in the billed branch.");
@@ -496,16 +502,12 @@ function igstFindings(): ScopeFinding[] {
 
   const invoiceTypes = frontendUnit("src/types/invoice.ts");
   const invoiceMath = frontendUnit("src/lib/invoiceMath.ts");
-  const documentModel = frontendUnit("src/components/create-invoice/invoiceDocumentModel.ts");
-  const exporter = frontendUnit("src/services/invoiceExportService.ts");
   const paymentSchemas = backendUnit("app/models/schemas.py");
   const calculationService = backendUnit("app/services/calculation_service.py");
   const workbookRows = backendUnit("app/excel/rows.py");
   for (const [unit, expected] of [
     [invoiceTypes, "CGST/SGST invoice type fields"],
     [invoiceMath, "CGST/SGST calculation fields"],
-    [documentModel, "shared document model without a partial IGST field"],
-    [exporter, "export path without an IGST column"],
     [paymentSchemas, "backend schemas without an IGST field"],
     [calculationService, "backend calculation path without an IGST rule"],
     [workbookRows, "workbook row adapter without an IGST persistence column"],
@@ -525,7 +527,7 @@ function igstFindings(): ScopeFinding[] {
 }
 
 describe("Task 11.4 static and scope guards", () => {
-  it("keeps persistence on FastAPI/openpyxl and out of browser proof storage", () => {
+  it("keeps migrated persistence behind FastAPI repositories and isolates offline browser storage", () => {
     const findings = persistenceFindings();
     expect(findings, formatFindings(findings)).toEqual([]);
   });
@@ -540,7 +542,7 @@ describe("Task 11.4 static and scope guards", () => {
     expect(findings, formatFindings(findings)).toEqual([]);
   });
 
-  it("enforces one invoice renderer and one invoice workbook export path", () => {
+  it("enforces template-only invoice downloads without an in-app preview", () => {
     const findings = rendererAndExportFindings();
     expect(findings, formatFindings(findings)).toEqual([]);
   });

@@ -2,8 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SendInvoiceModal } from "./SendInvoiceModal";
 import { activeDataProvider } from "@/services";
+import { downloadInvoiceTemplate } from "@/services/invoiceTemplateDownloadService";
 import { mockClients } from "@/data/mockClients";
 import type { Invoice } from "@/types";
+
+vi.mock("@/services/invoiceTemplateDownloadService", () => ({
+  downloadInvoiceTemplate: vi.fn().mockResolvedValue({
+    fileName: "Invoice_INV-1001.pdf",
+    warnings: [],
+  }),
+}));
 
 function makeBilledInvoice(): Invoice {
   return {
@@ -39,6 +47,11 @@ describe("Send_Invoice_Action", () => {
   it("sets sentAt and records one activity without changing billing state", async () => {
     const invoice = makeBilledInvoice();
     vi.spyOn(activeDataProvider, "getClients").mockResolvedValue(mockClients);
+    vi.mocked(downloadInvoiceTemplate).mockResolvedValue({
+      fileName: "Invoice_INV-1001.pdf",
+      warnings: [],
+    });
+    vi.spyOn(window, "open").mockReturnValue(null);
     const saveSpy = vi.spyOn(activeDataProvider, "saveInvoice").mockResolvedValue(invoice);
     const activitySpy = vi.spyOn(activeDataProvider, "addActivityEvent").mockResolvedValue({
       id: "event-1",

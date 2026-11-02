@@ -1,0 +1,18 @@
+/* Engineering grid + full dark-green panel background, exactly as used in login.css. */
+
+/* Grid only: put on an absolutely positioned layer over any dark background. */
+.sft-grid {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(247, 244, 238, .04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(247, 244, 238, .04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Full dark-green panel background (forest gradient + warm glow). Pair with .sft-grid. */
+.sft-panel-bg {
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(520px 360px at 12% 100%, rgba(184, 147, 90, .20), transparent 70%),
+    linear-gradient(160deg, #17372C, #0F2620);
+}

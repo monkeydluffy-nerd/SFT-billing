@@ -33,7 +33,6 @@ function makeClient(): Client {
     phone: "+91 90000 00000",
     billingAddress: "1 Main Street, Chennai 600001",
     gstin: "33AAAAA0000A1Z5",
-    clientSince: "2024-01-01T00:00:00.000Z",
   };
 }
 

@@ -11,6 +11,7 @@ export default {
     extend: {
       colors: {
         canvas: "rgb(var(--color-canvas) / <alpha-value>)",
+        header: "rgb(var(--color-header) / <alpha-value>)",
         surface: "rgb(var(--color-surface) / <alpha-value>)",
         "surface-raised": "rgb(var(--color-surface-raised) / <alpha-value>)",
         sidebar: "rgb(var(--color-sidebar) / <alpha-value>)",

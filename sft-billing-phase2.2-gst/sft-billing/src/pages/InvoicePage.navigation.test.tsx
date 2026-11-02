@@ -4,7 +4,6 @@ import { InvoicePage } from "./InvoicePage";
 import { activeDataProvider } from "@/services";
 import { mockBusinessProfile } from "@/data/mockBusinessProfile";
 import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
-import { buildInvoiceDocumentModel } from "@/components/create-invoice/invoiceDocumentModel";
 import { formatCurrency } from "@/lib/formatters";
 import type { Invoice, Payment } from "@/types";
 
@@ -101,33 +100,25 @@ describe("InvoicePage stable-id navigation states", () => {
     expect(await screen.findByText("Loading…")).toBeInTheDocument();
   });
 
-  it("renders the full shared document and billed print/download actions", async () => {
+  it("shows the invoice preview, template downloads, and ledger details", async () => {
     const invoice = makeInvoice();
     mockDetailData(invoice);
     useWorkspaceStore.setState({ currentPage: "invoice-detail", selectedInvoiceId: invoice.id });
 
-    render(<InvoicePage />);
+    const { container } = render(<InvoicePage />);
 
-    const model = buildInvoiceDocumentModel({ invoice, client: undefined, business: mockBusinessProfile });
-    const printSpy = vi.spyOn(window, "print").mockImplementation(() => undefined);
-
-    await waitFor(() => expect(screen.getByTestId("invoice-document")).toBeInTheDocument());
-    const documentRegion = screen.getByTestId("invoice-document");
-    expect(within(documentRegion).getByText("TAX INVOICE")).toBeInTheDocument();
-    expect(within(documentRegion).getAllByText("SFT Billing Services").length).toBeGreaterThan(0);
-    expect(within(documentRegion).getByText("Consulting")).toBeInTheDocument();
-    expect(
-      within(documentRegion).getByText(
-        `\u20B9 ${new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(model.totals.total)}`,
-      ),
-    ).toBeInTheDocument();
-    expect(within(documentRegion).getByText(model.totals.amountInWords)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Print / PDF" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Download invoice" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Export" }));
+    const exportMenu = screen.getByRole("menu");
+    expect(within(exportMenu).getByRole("menuitem", { name: "Download PDF" })).toBeInTheDocument();
+    expect(within(exportMenu).getByRole("menuitem", { name: "Download Excel" })).toBeInTheDocument();
+    expect(container.querySelector(".invoice-preview .invoice-container")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Print invoice" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Download invoice" })).not.toBeInTheDocument();
+    // The grand total appears in both the invoice preview and the ledger summary section.
+    // Target the ledger summary section specifically to avoid matching the preview's totals table.
+    const ledgerSummary = screen.getByRole("region", { name: "Invoice summary and details" });
+    expect(within(ledgerSummary).getAllByText(formatCurrency(1180)).length).toBeGreaterThan(0);
     expect(screen.getByText("Payment history")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Print / PDF" }));
-    expect(printSpy).toHaveBeenCalledTimes(1);
   });
 
   it("opens a payment receipt from invoice detail payment history", async () => {
@@ -153,16 +144,18 @@ describe("InvoicePage stable-id navigation states", () => {
     expect(useWorkspaceStore.getState().currentPage).toBe("invoice-detail");
   });
 
-  it("renders the shared document for a draft and keeps only continuation editing", async () => {
+  it("shows a draft preview and only offers continuation editing", async () => {
     const invoice = makeInvoice({ isDraft: true, billedAt: undefined });
     mockDetailData(invoice);
     useWorkspaceStore.setState({ currentPage: "invoice-detail", selectedInvoiceId: invoice.id });
 
-    render(<InvoicePage />);
+    const { container } = render(<InvoicePage />);
 
-    await waitFor(() => expect(screen.getByTestId("invoice-document")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Continue editing" })).toBeInTheDocument());
+    expect(container.querySelector(".invoice-preview .invoice-container")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continue editing" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Print / PDF" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Download PDF" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Download Excel" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Download invoice" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Continue editing" }));

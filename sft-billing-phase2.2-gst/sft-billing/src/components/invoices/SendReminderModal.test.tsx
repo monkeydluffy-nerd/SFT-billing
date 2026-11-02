@@ -2,8 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SendReminderModal } from "./SendReminderModal";
 import { activeDataProvider } from "@/services";
+import { downloadInvoiceTemplate } from "@/services/invoiceTemplateDownloadService";
 import { mockClients } from "@/data/mockClients";
 import type { Invoice } from "@/types";
+
+vi.mock("@/services/invoiceTemplateDownloadService", () => ({
+  downloadInvoiceTemplate: vi.fn().mockResolvedValue({
+    fileName: "Invoice_INV-1001.pdf",
+    warnings: [],
+  }),
+}));
 
 function makeBilledInvoice(): Invoice {
   return {
@@ -25,6 +33,11 @@ describe("Send_Reminder_Action", () => {
   it("records one activity on confirmation and does not deliver an external message", async () => {
     const invoice = makeBilledInvoice();
     vi.spyOn(activeDataProvider, "getClients").mockResolvedValue(mockClients);
+    vi.mocked(downloadInvoiceTemplate).mockResolvedValue({
+      fileName: "Invoice_INV-1001.pdf",
+      warnings: [],
+    });
+    vi.spyOn(window, "open").mockReturnValue(null);
     const activitySpy = vi.spyOn(activeDataProvider, "addActivityEvent").mockResolvedValue({
       id: "event-1",
       type: "invoice_reminder_sent",

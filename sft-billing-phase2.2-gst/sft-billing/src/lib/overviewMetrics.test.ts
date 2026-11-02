@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   computeLedgerStatusTotals,
-  computeMonthlyPaymentRevenueSeries,
-  revenueForCurrentMonth,
+  computeTotalOutstanding,
+  computeTotalOverdue,
+  computeTotalReceived,
+  computeTotalBilled,
 } from "./overviewMetrics";
 import type { Invoice, Payment } from "@/types";
 
@@ -35,36 +37,94 @@ function makePayment(invoice: Invoice, amount: number, receivedAt = asOf.toISOSt
   };
 }
 
-describe("Overview ledger adapters", () => {
-  it("uses payment-derived billed states and excludes draft amounts", () => {
-    const received = makeInvoice({ id: "received", dueDate: "2025-06-01T00:00:00.000Z" });
-    const outstanding = makeInvoice({ id: "outstanding", dueDate: "2025-06-30T00:00:00.000Z", paidAt: asOf.toISOString() });
-    const draft = makeInvoice({ id: "draft", isDraft: true, paidAt: asOf.toISOString() });
+describe("overviewMetrics - ledger-based totals with shared balance", () => {
+  it("computeLedgerStatusTotals uses outstanding balance for pending/overdue", () => {
+    const unpaid = makeInvoice({ id: "unpaid", dueDate: "2025-06-30T00:00:00.000Z" });
+    const partial = makeInvoice({ id: "partial", dueDate: "2025-06-30T00:00:00.000Z" });
+    const paid = makeInvoice({ id: "paid", dueDate: "2025-06-01T00:00:00.000Z" });
+    const overdue = makeInvoice({ id: "overdue", dueDate: "2025-06-01T00:00:00.000Z" });
+    const draft = makeInvoice({ id: "draft", isDraft: true });
+
     const totals = computeLedgerStatusTotals(
-      [received, outstanding, draft],
-      [makePayment(received, 100), makePayment(draft, 100)],
+      [unpaid, partial, paid, overdue, draft],
+      [
+        makePayment(partial, 30), // Partial payment of 30 on 100 total
+        makePayment(paid, 100),   // Full payment on 100 total
+      ],
       asOf,
     );
 
-    expect(totals.paid).toMatchObject({ count: 1, amount: 100 });
-    expect(totals.pending).toMatchObject({ count: 1, amount: 100 });
-    expect(totals.draft).toMatchObject({ count: 1, amount: 0 });
+    // Unpaid: outstanding = 100
+    // Partial: outstanding = 70 (100 - 30)
+    // Total pending = 100 + 70 = 170
+    expect(totals.pending.amount).toBe(170);
+    // Overdue: outstanding = 100
+    expect(totals.overdue.amount).toBe(100);
+    // Paid: total = 100 (full invoice total, not outstanding)
+    expect(totals.paid.amount).toBe(100);
+    // Draft: amount = 0
+    expect(totals.draft.amount).toBe(0);
   });
 
-  it("uses billed payment dates and ignores payments associated with drafts", () => {
-    const billed = makeInvoice({ id: "billed" });
-    const draft = makeInvoice({ id: "draft", isDraft: true });
-    const series = computeMonthlyPaymentRevenueSeries(
-      [billed, draft],
-      [
-        makePayment(billed, 75, "2025-05-20T00:00:00.000Z"),
-        makePayment(billed, 25, "2025-06-10T00:00:00.000Z"),
-        makePayment(draft, 999, "2025-06-11T00:00:00.000Z"),
-      ],
-      2,
-      asOf,
-    );
+  it("computeTotalOutstanding sums outstanding balances", () => {
+    const invoices = [
+      makeInvoice({ id: "1" }),
+      makeInvoice({ id: "2" }),
+      makeInvoice({ id: "3", isDraft: true }),
+    ];
+    const payments = [
+      makePayment(invoices[0], 30),
+      makePayment(invoices[1], 100),
+    ];
 
-    expect(revenueForCurrentMonth(series)).toMatchObject({ current: 25, previous: 75 });
+    const outstanding = computeTotalOutstanding(invoices, payments);
+    // Invoice 1: 100 - 30 = 70
+    // Invoice 2: 100 - 100 = 0
+    // Invoice 3: draft = excluded
+    expect(outstanding).toBe(70);
+  });
+
+  it("computeTotalOverdue sums outstanding balances for overdue invoices", () => {
+    const invoices = [
+      makeInvoice({ id: "1", dueDate: "2025-06-01T00:00:00.000Z" }), // overdue
+      makeInvoice({ id: "2", dueDate: "2025-06-30T00:00:00.000Z" }), // pending
+      makeInvoice({ id: "3", dueDate: "2025-06-01T00:00:00.000Z", isDraft: true }), // overdue but draft
+    ];
+    const payments = [
+      makePayment(invoices[0], 30),
+      makePayment(invoices[1], 50),
+    ];
+
+    const overdue = computeTotalOverdue(invoices, payments, asOf);
+    // Invoice 1: 100 - 30 = 70 (overdue)
+    // Invoice 2: not overdue
+    // Invoice 3: draft excluded
+    expect(overdue).toBe(70);
+  });
+
+  it("computeTotalReceived sums payments for billed invoices", () => {
+    const invoices = [
+      makeInvoice({ id: "1" }),
+      makeInvoice({ id: "2", isDraft: true }),
+    ];
+    const payments = [
+      makePayment(invoices[0], 30),
+      makePayment(invoices[0], 20),
+      makePayment(invoices[1], 100), // draft payment ignored
+    ];
+
+    const received = computeTotalReceived(invoices, payments);
+    expect(received).toBe(50);
+  });
+
+  it("computeTotalBilled sums invoice totals for non-draft invoices", () => {
+    const invoices = [
+      makeInvoice({ id: "1", items: [{ id: "1", description: "Item", quantity: 1, unitPrice: 100 }] }),
+      makeInvoice({ id: "2", items: [{ id: "2", description: "Item", quantity: 2, unitPrice: 200 }] }),
+      makeInvoice({ id: "3", isDraft: true }),
+    ];
+
+    const billed = computeTotalBilled(invoices);
+    expect(billed).toBe(500); // 100 + 400
   });
 });

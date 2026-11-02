@@ -3,8 +3,16 @@ import fc from "fast-check";
 import { render, fireEvent, waitFor } from "@testing-library/react";
 import { SendInvoiceModal } from "./SendInvoiceModal";
 import { activeDataProvider } from "@/services";
+import { downloadInvoiceTemplate } from "@/services/invoiceTemplateDownloadService";
 import { mockClients } from "@/data/mockClients";
 import type { Invoice } from "@/types";
+
+vi.mock("@/services/invoiceTemplateDownloadService", () => ({
+  downloadInvoiceTemplate: vi.fn().mockResolvedValue({
+    fileName: "Invoice_INV-1.pdf",
+    warnings: [],
+  }),
+}));
 
 function makeBilledInvoice(overrides: Partial<Invoice> = {}): Invoice {
   return {
@@ -29,6 +37,11 @@ describe("Feature: core-business-system, Property 4: Sending sets sentAt without
       fc.asyncProperty(fc.option(fc.constant("2025-04-15T00:00:00.000Z"), { nil: undefined }), async (priorSentAt) => {
         const invoice = makeBilledInvoice({ sentAt: priorSentAt });
         vi.spyOn(activeDataProvider, "getClients").mockResolvedValue(mockClients);
+        vi.mocked(downloadInvoiceTemplate).mockResolvedValue({
+          fileName: "Invoice_INV-1.pdf",
+          warnings: [],
+        });
+        vi.spyOn(window, "open").mockReturnValue(null);
         const saveSpy = vi.spyOn(activeDataProvider, "saveInvoice").mockResolvedValue(invoice);
         vi.spyOn(activeDataProvider, "addActivityEvent").mockResolvedValue({
           id: "ev_1",

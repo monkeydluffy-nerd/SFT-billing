@@ -19,6 +19,7 @@ interface FormValues {
   phone: string;
   billingAddress: string;
   gstin: string;
+  pan: string;
   notes: string;
 }
 
@@ -29,17 +30,19 @@ const EMPTY_FORM: FormValues = {
   phone: "",
   billingAddress: "",
   gstin: "",
+  pan: "",
   notes: "",
 };
 
 function formValuesFromClient(client: Client): FormValues {
   return {
     name: client.name,
-    contactName: client.contactName,
-    email: client.email,
+    contactName: client.contactName ?? "",
+    email: client.email ?? "",
     phone: client.phone ?? "",
     billingAddress: client.billingAddress,
     gstin: client.gstin ?? "",
+    pan: client.pan ?? "",
     notes: client.notes ?? "",
   };
 }
@@ -47,17 +50,26 @@ function formValuesFromClient(client: Client): FormValues {
 type FormErrors = Partial<Record<keyof FormValues, string>>;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i;
 
 function validate(values: FormValues): FormErrors {
   const errors: FormErrors = {};
   if (!values.name.trim()) errors.name = "Client name is required.";
-  if (!values.contactName.trim()) errors.contactName = "Contact name is required.";
-  if (!values.email.trim()) {
-    errors.email = "Email is required.";
-  } else if (!EMAIL_PATTERN.test(values.email.trim())) {
-    errors.email = "Enter a valid email address.";
+  if (values.email.trim() && !EMAIL_PATTERN.test(values.email.trim())) {
+    errors.email = "Enter a valid email address (e.g., name@gmail.com).";
   }
   if (!values.billingAddress.trim()) errors.billingAddress = "Billing address is required.";
+  // Phone: exactly 10 digits
+  const phoneDigits = values.phone.replace(/\D/g, "");
+  if (!phoneDigits) {
+    errors.phone = "Phone number is required.";
+  } else if (phoneDigits.length !== 10) {
+    errors.phone = "Phone number must be exactly 10 digits.";
+  }
+  // GSTIN: optional, but validate format when provided
+  if (values.gstin.trim() && !GSTIN_PATTERN.test(values.gstin.trim())) {
+    errors.gstin = "Invalid GSTIN format. Expected 15 characters (e.g., 22AAAAA0000A1Z5).";
+  }
   return errors;
 }
 
@@ -110,10 +122,11 @@ export function AddClientModal({ open, onClose, onCreated, editingClient, onUpda
     const fields = {
       name: values.name.trim(),
       contactName: values.contactName.trim(),
-      email: values.email.trim(),
-      phone: values.phone.trim() || undefined,
+      email: values.email.trim() || null,
+      phone: values.phone.trim() || null,
       billingAddress: values.billingAddress.trim(),
-      gstin: values.gstin.trim() || undefined,
+      gstin: values.gstin.trim(),
+      pan: values.pan.trim() || null,
       notes: values.notes.trim() || undefined,
     };
 
@@ -127,7 +140,6 @@ export function AddClientModal({ open, onClose, onCreated, editingClient, onUpda
         const client: Client = {
           id: `cl_runtime_${Date.now()}`,
           ...fields,
-          clientSince: new Date().toISOString(),
         };
         const created = await activeDataProvider.createClient(client);
         setValues(EMPTY_FORM);
@@ -184,7 +196,6 @@ export function AddClientModal({ open, onClose, onCreated, editingClient, onUpda
             placeholder="Priya Sharma"
             className={`${inputClass} ${errors.contactName ? errorInputClass : ""}`}
           />
-          {errors.contactName && <p className={errorTextClass}>{errors.contactName}</p>}
         </div>
 
         <div>
@@ -204,15 +215,20 @@ export function AddClientModal({ open, onClose, onCreated, editingClient, onUpda
 
         <div>
           <label className={labelClass} htmlFor="client-phone">
-            Phone (optional)
+            Phone
           </label>
           <input
             id="client-phone"
             value={values.phone}
-            onChange={(e) => update("phone", e.target.value)}
-            placeholder="+91 98765 43210"
-            className={inputClass}
+            onChange={(e) => {
+              const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+              update("phone", digits);
+            }}
+            placeholder="9876543210"
+            maxLength={10}
+            className={`${inputClass} ${errors.phone ? errorInputClass : ""}`}
           />
+          {errors.phone && <p className={errorTextClass}>{errors.phone}</p>}
         </div>
 
         <div>
@@ -239,10 +255,25 @@ export function AddClientModal({ open, onClose, onCreated, editingClient, onUpda
           <input
             id="client-gstin"
             value={values.gstin}
-            onChange={(e) => update("gstin", e.target.value)}
+            onChange={(e) => update("gstin", e.target.value.toUpperCase())}
             placeholder="22AAAAA0000A1Z5"
-            className={inputClass}
+            className={`${inputClass} ${errors.gstin ? errorInputClass : ""}`}
           />
+          {errors.gstin && <p className={errorTextClass}>{errors.gstin}</p>}
+        </div>
+
+        <div>
+          <label className={labelClass} htmlFor="client-pan">
+            PAN
+          </label>
+          <input
+            id="client-pan"
+            value={values.pan}
+            onChange={(e) => update("pan", e.target.value)}
+            placeholder="AAAAA0000A"
+            className={`${inputClass} ${errors.pan ? errorInputClass : ""}`}
+          />
+          {errors.pan && <p className={errorTextClass}>{errors.pan}</p>}
         </div>
 
         <div>

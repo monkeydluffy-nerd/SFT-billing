@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CreateInvoicePage } from "./CreateInvoicePage";
 import { activeDataProvider } from "@/services";
 import { mockBusinessProfile } from "@/data/mockBusinessProfile";
@@ -26,6 +26,7 @@ describe("CreateInvoicePage layout", () => {
     vi.spyOn(activeDataProvider, "getClients").mockResolvedValue(mockClients);
     vi.spyOn(activeDataProvider, "getProducts").mockResolvedValue([]);
     vi.spyOn(activeDataProvider, "getBusinessProfile").mockResolvedValue(mockBusinessProfile);
+    vi.spyOn(activeDataProvider, "releaseReservation").mockResolvedValue({ released: true, invoiceId: draftInvoice.id });
     useWorkspaceStore.setState({
       currentPage: "create-invoice",
       invoiceDraftPrefill: { invoiceId: draftInvoice.id },
@@ -34,21 +35,27 @@ describe("CreateInvoicePage layout", () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.restoreAllMocks();
   });
 
-  it("leaves page scrolling to the outer main and keeps document controls in normal flow", async () => {
+  it("keeps the invoice builder and actions in normal page flow without a document preview", async () => {
     const { container } = render(
       <main className="flex-1 overflow-y-auto">
         <CreateInvoicePage />
       </main>,
     );
 
+    // Wait for loading to complete - the component shows "Loading..." while draft is null
+    await waitFor(() => {
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+    });
+
     await screen.findByRole("button", { name: /Round to nearest/ });
 
     const main = container.querySelector("main");
     const page = main?.querySelector(":scope > div.min-h-full");
-    const content = page?.querySelector(":scope > div.grid");
+    const content = page?.querySelector(":scope > div.invoice-create-layout");
     const footer = page && Array.from(page.children).find((child) => child.classList.contains("border-t"));
 
     expect(main).toHaveClass("overflow-y-auto");
@@ -60,9 +67,37 @@ describe("CreateInvoicePage layout", () => {
     expect(footer).not.toHaveClass("sticky", "fixed");
 
     expect(screen.getByRole("button", { name: /Round to nearest/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Download invoice/ })).toBeInTheDocument();
+    expect(screen.queryByTestId("invoice-document-page")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Download invoice/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Save as draft/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Bill invoice/ })).toBeInTheDocument();
-    expect(screen.getByText("Grand Total")).toBeInTheDocument();
+    expect(screen.getByText("Total due")).toBeInTheDocument();
+  });
+
+  it("shows reservation failures and retries invoice initialization", async () => {
+    vi.spyOn(activeDataProvider, "getInvoices").mockResolvedValue([]);
+    vi.spyOn(activeDataProvider, "getClients").mockResolvedValue(mockClients);
+    vi.spyOn(activeDataProvider, "getProducts").mockResolvedValue([]);
+    vi.spyOn(activeDataProvider, "getBusinessProfile").mockResolvedValue(mockBusinessProfile);
+    vi.spyOn(activeDataProvider, "releaseReservation").mockResolvedValue({ released: true, invoiceId: "test" });
+    const reserveNumber = vi
+      .spyOn(activeDataProvider, "reserveInvoiceNumber")
+      .mockRejectedValueOnce(new Error("Invoice number reservation failed."))
+      .mockResolvedValue("030/2026-27");
+    useWorkspaceStore.setState({
+      currentPage: "create-invoice",
+      invoiceDraftPrefill: null,
+      selectedClientId: null,
+    });
+
+    render(<CreateInvoicePage />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Invoice number reservation failed.",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+
+    await screen.findByRole("button", { name: /Bill invoice/i });
+    await waitFor(() => expect(reserveNumber).toHaveBeenCalledTimes(2));
   });
 });

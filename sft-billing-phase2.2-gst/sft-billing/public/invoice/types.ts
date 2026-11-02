@@ -1,6 +1,4 @@
-/** Domain types for the tax invoice. Shared by the UI, the FastAPI
- *  contract (mirror this shape in a Pydantic model) and the ExcelJS
- *  export, so all three stay in sync. */
+/** Domain types retained for the standalone legacy invoice prototype. */
 
 export interface Seller {
   name: string;

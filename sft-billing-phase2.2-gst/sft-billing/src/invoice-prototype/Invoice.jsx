@@ -178,15 +178,23 @@ const ItemsTable = ({ items, tax, labels }) => {
         </tr>
       </thead>
       <tbody>
-        {items.map((item) => (
-          <tr key={item.serial}>
-            {columns.map((c) => (
-              <td key={c.key} className={c.align}>
-                {c.money ? formatAmount(item[c.key]) : item[c.key]}
-              </td>
-            ))}
+        {items.length > 0 ? (
+          items.map((item) => (
+            <tr key={item.serial}>
+              {columns.map((c) => (
+                <td key={c.key} className={c.align}>
+                  {c.money ? formatAmount(item[c.key]) : item[c.key]}
+                </td>
+              ))}
+            </tr>
+          ))
+        ) : (
+          <tr>
+            <td colSpan={columns.length} className="ta-c">
+              {labels.lineItemsEmpty ?? "Add line items to see them here"}
+            </td>
           </tr>
-        ))}
+        )}
       </tbody>
     </table>
   );
@@ -276,7 +284,8 @@ const DEFAULT_LABELS = {
   unit: 'Unit',
   rate: 'Rate',
   taxableValue: 'Taxable Value',
-  amount: 'Amount'
+  amount: 'Amount',
+  lineItemsEmpty: 'Add line items to see them here'
 };
 
 /**
@@ -302,9 +311,11 @@ export default function Invoice({ invoice, labels: labelOverrides }) {
         <ItemsTable items={items} tax={tax} labels={labels} />
 
         <section className="inv-summary">
-          <AccentBox className="inv-words" title={labels.amountInWords}>
-            {amountInWords}
-          </AccentBox>
+          {amountInWords && (
+            <AccentBox className="inv-words" title={labels.amountInWords}>
+              {amountInWords}
+            </AccentBox>
+          )}
           <Totals totals={totals} tax={tax} labels={labels} />
         </section>
 

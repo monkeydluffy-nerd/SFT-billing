@@ -2,29 +2,25 @@ import { Calendar } from "lucide-react";
 import type { Client, InvoiceStatus } from "@/types";
 import { DATE_PRESET_LABELS, resolvePresetRange, type DatePreset, type ReportFilterState } from "@/lib/reports";
 import { cn } from "@/lib/cn";
+import { Dropdown } from "@/components/shared/Dropdown";
 
 interface ReportFiltersProps {
   filters: ReportFilterState;
   onChange: (next: ReportFilterState) => void;
   clients: Client[] | undefined;
-  dateOnly?: boolean;
   asOf?: Date;
+  onExcludeTestDataChange?: (exclude: boolean) => void;
 }
 
-const STATUS_OPTIONS: { value: InvoiceStatus | ""; label: string }[] = [
+// Shared filter data is intentionally exported alongside this component.
+// eslint-disable-next-line react-refresh/only-export-components
+export const STATUS_OPTIONS: { value: InvoiceStatus | ""; label: string }[] = [
   { value: "", label: "All statuses" },
   { value: "draft", label: "Draft" },
   { value: "pending", label: "Outstanding" },
   { value: "overdue", label: "Overdue" },
   { value: "paid", label: "Paid" },
 ];
-
-const PRESETS: DatePreset[] = ["this-month", "last-month", "last-3-months", "last-12-months", "custom"];
-
-const selectClass =
-  "h-9 rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none focus:border-border-strong cursor-pointer";
-const dateInputClass =
-  "font-tabular h-9 rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none focus:border-border-strong";
 
 /**
  * Date range is chosen via named presets first ("This month", "Last 3
@@ -33,7 +29,13 @@ const dateInputClass =
  * date inputs, since that's the only case where a bare picker is the
  * right control.
  */
-export function ReportFilters({ filters, onChange, clients, dateOnly = false, asOf }: ReportFiltersProps) {
+export function ReportFilters({
+  filters,
+  onChange,
+  clients,
+  asOf,
+  onExcludeTestDataChange,
+}: ReportFiltersProps) {
   function selectPreset(preset: DatePreset) {
     if (preset === "custom") {
       onChange({ ...filters, preset, from: filters.from, to: filters.to });
@@ -45,30 +47,33 @@ export function ReportFilters({ filters, onChange, clients, dateOnly = false, as
 
   return (
     <div className="flex flex-wrap items-center gap-3">
+      {/* Date Presets */}
       <div className="flex items-center gap-1 rounded-md border border-border bg-surface p-1">
-        {PRESETS.map((preset) => (
+        {["this-month", "last-month", "last-3-months", "last-12-months", "custom"].map((preset) => (
           <button
             key={preset}
             type="button"
-            onClick={() => selectPreset(preset)}
+            onClick={() => selectPreset(preset as "this-month" | "last-month" | "last-3-months" | "last-12-months" | "custom")}
             className={cn(
               "rounded-[5px] px-2.5 py-1.5 text-xs font-medium transition-colors duration-micro",
               filters.preset === preset ? "bg-accent text-accent-ink" : "text-ink-muted hover:text-ink",
             )}
           >
-            {DATE_PRESET_LABELS[preset]}
+            {DATE_PRESET_LABELS[preset as "this-month" | "last-month" | "last-3-months" | "last-12-months" | "custom"]}
           </button>
         ))}
       </div>
 
       {filters.preset === "custom" && (
         <div className="flex items-center gap-1.5">
-          <Calendar size={14} className="text-ink-faint" aria-hidden />
+          <svg className="w-4 h-4 text-ink-faint" aria-hidden>
+            <Calendar size={14} />
+          </svg>
           <input
             type="date"
             value={filters.from ?? ""}
             onChange={(e) => onChange({ ...filters, from: e.target.value || null })}
-            className={dateInputClass}
+            className="font-tabular h-9 rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none focus:border-border-strong"
             aria-label="From date"
           />
           <span className="text-xs text-ink-faint">to</span>
@@ -76,42 +81,49 @@ export function ReportFilters({ filters, onChange, clients, dateOnly = false, as
             type="date"
             value={filters.to ?? ""}
             onChange={(e) => onChange({ ...filters, to: e.target.value || null })}
-            className={dateInputClass}
+            className="font-tabular h-9 rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none focus:border-border-strong"
             aria-label="To date"
           />
         </div>
       )}
 
-      {!dateOnly && (
-        <>
-          <select
-            value={filters.clientId ?? ""}
-            onChange={(e) => onChange({ ...filters, clientId: e.target.value || null })}
-            className={selectClass}
-            aria-label="Filter by client"
-          >
-            <option value="">All clients</option>
-            {(clients ?? []).map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.name}
-              </option>
-            ))}
-          </select>
+      {/* Client Dropdown */}
+      <Dropdown
+        value={filters.clientId ?? ""}
+        onChange={(value) => onChange({ ...filters, clientId: value || null })}
+        options={[
+          { value: "", label: "All clients" },
+          ...(clients ?? []).map((client) => ({ value: client.id, label: client.name })),
+        ]}
+        placeholder="All clients"
+        ariaLabel="Filter by client"
+      />
 
-          <select
-            value={filters.status ?? ""}
-            onChange={(e) => onChange({ ...filters, status: (e.target.value || null) as InvoiceStatus | null })}
-            className={selectClass}
-            aria-label="Filter by status"
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </>
-      )}
+      {/* Status Dropdown */}
+      <Dropdown
+        value={filters.status ?? ""}
+        onChange={(value) => onChange({ ...filters, status: (value || null) as InvoiceStatus | null })}
+        options={[
+          { value: "", label: "All statuses" },
+          { value: "draft", label: "Draft" },
+          { value: "pending", label: "Outstanding" },
+          { value: "overdue", label: "Overdue" },
+          { value: "paid", label: "Paid" },
+        ]}
+        placeholder="All statuses"
+        ariaLabel="Filter by status"
+      />
+
+      {/* Exclude Test Data Toggle */}
+      <label className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-surface text-sm text-ink-muted cursor-pointer hover:bg-canvas transition-colors duration-micro">
+        <input
+          type="checkbox"
+          checked={true}
+          onChange={(e) => onExcludeTestDataChange?.(e.target.checked)}
+          className="rounded border-border text-accent focus:ring-accent focus:ring-2"
+        />
+        <span>Exclude test data</span>
+      </label>
     </div>
   );
 }

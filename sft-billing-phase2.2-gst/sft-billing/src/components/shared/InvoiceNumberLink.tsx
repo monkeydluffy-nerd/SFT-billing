@@ -16,17 +16,25 @@ interface InvoiceNumberLinkProps {
  */
 export function InvoiceNumberLink({ invoice, className }: InvoiceNumberLinkProps) {
   const navigateToInvoiceDetail = useWorkspaceStore((s) => s.navigateToInvoiceDetail);
+  function openInvoice(e?: { stopPropagation: () => void }) {
+    e?.stopPropagation();
+    navigateToInvoiceDetail(invoice.id);
+  }
+
   return (
     <button
       type="button"
       onClick={(e) => {
-        e.stopPropagation();
-        navigateToInvoiceDetail(invoice.id);
+        openInvoice(e);
       }}
       onKeyDown={(e) => {
         // Parent rows can use Enter/Space to open a different surface (for
         // example, a payment receipt). Keep keyboard activation exact too.
         e.stopPropagation();
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openInvoice();
+        }
       }}
       aria-label={`Open invoice ${invoice.number}`}
       className={cn(

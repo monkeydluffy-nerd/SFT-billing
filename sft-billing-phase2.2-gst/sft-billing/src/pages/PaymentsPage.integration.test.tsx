@@ -41,6 +41,31 @@ afterEach(() => {
 });
 
 describe("PaymentsPage payment proof integration", () => {
+  it("rejects a new payment that exceeds the remaining invoice balance", async () => {
+    const priorPayment: Payment = {
+      id: "payment-partial-ui",
+      invoiceId: invoice.id,
+      clientId: invoice.clientId,
+      amount: 500,
+      method: "upi",
+      receivedAt: "2025-06-10T00:00:00.000Z",
+    };
+    const recordPayment = vi.spyOn(activeDataProvider, "recordPayment");
+    mockPaymentLookups(async () => [priorPayment]);
+
+    render(<PaymentsPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Record payment" }, { timeout: 5000 }));
+    const dialog = await screen.findByRole("dialog", {}, { timeout: 5000 });
+    fillPaymentForm(dialog);
+    fireEvent.change(within(dialog).getByLabelText("Amount"), { target: { value: "700" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Record payment" }));
+
+    // Use screen.findByText instead of within(dialog) to avoid stale reference after re-render
+    expect(await screen.findByText(/Amount cannot exceed outstanding balance of/)).toBeInTheDocument();
+    expect(recordPayment).not.toHaveBeenCalled();
+  });
+
   it("submits a no-proof payment and refreshes from the provider", async () => {
     const persistedPayment: Payment = {
       id: "payment-no-proof-ui",
@@ -111,7 +136,10 @@ describe("PaymentsPage payment proof integration", () => {
       content: proof,
     });
     await waitFor(() => expect(getPayments).toHaveBeenCalledTimes(2), { timeout: 5000 });
-    expect(await screen.findByText(`Proof: ${persistedPayment.paymentProof!.fileName}`)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: `Replace proof for payment ${persistedPayment.id}` })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /Proof attached/ }));
+    expect(await screen.findByRole("dialog", { name: "Payment Details" })).toBeInTheDocument();
+    expect(screen.getByText(persistedPayment.paymentProof!.fileName)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Edit Payment" }));
+    expect(await screen.findByRole("button", { name: "Replace proof" })).toBeInTheDocument();
   });
 });

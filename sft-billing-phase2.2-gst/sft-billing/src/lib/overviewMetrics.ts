@@ -1,6 +1,10 @@
 import type { Invoice, InvoiceStatus, Payment } from "@/types";
 import { getInvoiceStatus, getInvoiceWorkflowStatus, computeInvoiceTotals } from "./invoiceMath";
 import { monthKey, monthLabel } from "@/data/dateHelpers";
+import {
+  getInvoiceOutstandingBalance,
+  getInvoiceTotal,
+} from "./invoiceBalance";
 
 export interface StatusTotal {
   status: InvoiceStatus;
@@ -37,6 +41,9 @@ export function computeStatusTotals(invoices: Invoice[], asOf: Date = new Date()
  * Overview/filter compatibility (`pending`/`paid`) while their values come
  * from the ledger-derived `outstanding`/`received` states. Draft amount is
  * deliberately kept at zero because a draft is not billed revenue.
+ * 
+ * Outstanding/overdue amounts now use the remaining balance (total - payments)
+ * instead of the full invoice face value.
  */
 export function computeLedgerStatusTotals(
   invoices: Invoice[],
@@ -52,7 +59,7 @@ export function computeLedgerStatusTotals(
 
   for (const invoice of invoices) {
     const workflowStatus = getInvoiceWorkflowStatus(invoice, payments, asOf);
-    const { total } = computeInvoiceTotals(invoice);
+    const total = getInvoiceTotal(invoice);
 
     if (workflowStatus.status === "draft") {
       totals.draft.count += 1;
@@ -66,7 +73,13 @@ export function computeLedgerStatusTotals(
           ? "paid"
           : "overdue";
     totals[status].count += 1;
-    totals[status].amount += total;
+    
+    // Use outstanding balance for pending/overdue, total for paid
+    if (status === "paid") {
+      totals[status].amount += total;
+    } else {
+      totals[status].amount += getInvoiceOutstandingBalance(invoice, payments);
+    }
   }
 
   return totals;
@@ -139,4 +152,43 @@ export function revenueForCurrentMonth(series: MonthlyRevenuePoint[]): { current
   const previous = series[series.length - 2]?.revenue ?? 0;
   const changePct = previous === 0 ? (current > 0 ? 100 : 0) : ((current - previous) / previous) * 100;
   return { current, previous, changePct };
+}
+
+/**
+ * Compute total outstanding across all invoices.
+ * Uses the shared balance calculation for consistency.
+ */
+export function computeTotalOutstanding(invoices: Invoice[], payments: Payment[]): number {
+  return invoices
+    .filter((invoice) => !invoice.isDraft)
+    .reduce((sum, invoice) => sum + getInvoiceOutstandingBalance(invoice, payments), 0);
+}
+
+/**
+ * Compute total overdue across all invoices.
+ * Uses the shared balance calculation for consistency.
+ */
+export function computeTotalOverdue(invoices: Invoice[], payments: Payment[], asOf: Date = new Date()): number {
+  return invoices
+    .filter((invoice) => !invoice.isDraft && getInvoiceStatus(invoice, asOf).status === "overdue")
+    .reduce((sum, invoice) => sum + getInvoiceOutstandingBalance(invoice, payments), 0);
+}
+
+/**
+ * Compute total received (payments) across all invoices.
+ */
+export function computeTotalReceived(invoices: Invoice[], payments: Payment[]): number {
+  const billedInvoiceIds = new Set(invoices.filter((i) => !i.isDraft).map((i) => i.id));
+  return payments
+    .filter((p) => billedInvoiceIds.has(p.invoiceId))
+    .reduce((sum, p) => sum + p.amount, 0);
+}
+
+/**
+ * Compute total billed (invoice face value) across all invoices.
+ */
+export function computeTotalBilled(invoices: Invoice[]): number {
+  return invoices
+    .filter((invoice) => !invoice.isDraft)
+    .reduce((sum, invoice) => sum + getInvoiceTotal(invoice), 0);
 }

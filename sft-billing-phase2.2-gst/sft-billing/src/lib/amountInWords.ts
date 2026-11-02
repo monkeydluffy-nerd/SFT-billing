@@ -44,8 +44,9 @@ function integerToIndianWords(value: number): string {
  * sync with the actual total. Currency label defaults to Rupees/Paise.
  */
 export function amountInWords(total: number): string {
-  const rupees = Math.floor(Math.abs(total));
-  const paise = Math.round((Math.abs(total) - rupees) * 100);
+  const totalPaise = Math.round(Math.abs(total) * 100);
+  const rupees = Math.floor(totalPaise / 100);
+  const paise = totalPaise % 100;
 
   const rupeeWords = `${integerToIndianWords(rupees)} Rupees`;
   const paiseWords = paise > 0 ? ` and ${integerToIndianWords(paise)} Paise` : "";

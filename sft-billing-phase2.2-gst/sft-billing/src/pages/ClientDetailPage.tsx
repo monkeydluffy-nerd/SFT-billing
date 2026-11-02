@@ -125,27 +125,23 @@ export function ClientDetailPage() {
         <div className="grid grid-cols-2 gap-4 rounded-lg border border-border p-5 sm:grid-cols-3">
           <div>
             <p className="text-xs font-medium text-ink-faint">Contact</p>
-            <p className="mt-1 text-sm text-ink">{client.contactName}</p>
+            <p className="mt-1 text-sm text-ink truncate">{client.contactName}</p>
           </div>
           <div>
             <p className="text-xs font-medium text-ink-faint">Email</p>
-            <p className="mt-1 text-sm text-ink">{client.email}</p>
+            <p className="mt-1 text-sm text-ink truncate">{client.email}</p>
           </div>
           <div>
             <p className="text-xs font-medium text-ink-faint">Phone</p>
-            <p className="mt-1 text-sm text-ink">{client.phone ?? "—"}</p>
+            <p className="mt-1 text-sm text-ink truncate">{client.phone ?? "—"}</p>
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <p className="text-xs font-medium text-ink-faint">Billing address</p>
-            <p className="mt-1 text-sm text-ink">{client.billingAddress}</p>
+            <p className="mt-1 text-sm text-ink truncate">{client.billingAddress}</p>
           </div>
           <div>
             <p className="text-xs font-medium text-ink-faint">GSTIN</p>
-            <p className="mt-1 text-sm text-ink">{client.gstin ?? "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-ink-faint">Client since</p>
-            <p className="mt-1 text-sm text-ink">{formatDate(client.clientSince)}</p>
+            <p className="mt-1 text-sm text-ink truncate">{client.gstin ?? "—"}</p>
           </div>
           {client.notes && (
             <div className="col-span-full">

@@ -1,5 +1,4 @@
 import type { Client } from "@/types";
-import { isoDateOnly, daysAgo } from "./dateHelpers";
 
 export const mockClients: Client[] = [
   {
@@ -10,7 +9,7 @@ export const mockClients: Client[] = [
     phone: "+91 98450 11234",
     billingAddress: "4th Floor, Prestige Towers, MG Road, Bengaluru 560001",
     gstin: "29AAACA1234B1Z6",
-    clientSince: isoDateOnly(daysAgo(612)),
+    pan: "AAACA1234B",
   },
   {
     id: "cl_nova",
@@ -20,7 +19,7 @@ export const mockClients: Client[] = [
     phone: "+91 90080 44521",
     billingAddress: "12 Ashok Nagar Industrial Estate, Chennai 600083",
     gstin: "33AABCN5678C1Z2",
-    clientSince: isoDateOnly(daysAgo(401)),
+    pan: "AABCN5678C",
   },
   {
     id: "cl_kestrel",
@@ -29,7 +28,7 @@ export const mockClients: Client[] = [
     email: "finance@kestrelretail.in",
     billingAddress: "22B Linking Road, Bandra West, Mumbai 400050",
     gstin: "27AACCK9012D1Z8",
-    clientSince: isoDateOnly(daysAgo(298)),
+    pan: "AACCK9012D",
   },
   {
     id: "cl_orbit",
@@ -39,7 +38,7 @@ export const mockClients: Client[] = [
     phone: "+91 87654 32109",
     billingAddress: "Plot 9, Sector 18, Gurugram 122015",
     gstin: "06AADCO3456E1Z4",
-    clientSince: isoDateOnly(daysAgo(215)),
+    pan: "AADCO3456E",
   },
   {
     id: "cl_northfield",
@@ -48,7 +47,7 @@ export const mockClients: Client[] = [
     email: "meera@northfieldconsulting.com",
     billingAddress: "88 Residency Road, Bengaluru 560025",
     gstin: "29AAKFN7890F1Z1",
-    clientSince: isoDateOnly(daysAgo(174)),
+    pan: "AAKFN7890F",
   },
   {
     id: "cl_veyra",
@@ -58,6 +57,6 @@ export const mockClients: Client[] = [
     phone: "+91 99001 22334",
     billingAddress: "Unit 4, Medipark Complex, Pune 411045",
     gstin: "27AAECV2345G1Z9",
-    clientSince: isoDateOnly(daysAgo(96)),
+    pan: "AAECV2345G",
   },
 ];

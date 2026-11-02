@@ -1,19 +1,26 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, FileBarChart } from "lucide-react";
+import { AlertTriangle, FileBarChart, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { OverviewSkeleton } from "@/components/shared/SkeletonLoader";
 import { StatusChip } from "@/components/shared/StatusChip";
 import { InvoiceNumberLink } from "@/components/shared/InvoiceNumberLink";
 import { ReportTypeTabs } from "@/components/reports/ReportTypeTabs";
-import { ReportFilters } from "@/components/reports/ReportFilters";
-import { ReportSummary } from "@/components/reports/ReportSummary";
+import { ReportFilters, STATUS_OPTIONS } from "@/components/reports/ReportFilters";
+import { ReportSummary, KPICard } from "@/components/reports/ReportSummary";
+import { CollectionOutlook } from "@/components/reports/CollectionOutlook";
+import { DataQualityChecks } from "@/components/reports/DataQualityChecks";
+import { ClientTrends } from "@/components/reports/ClientTrends";
+import { ProductSalesInsights } from "@/components/reports/ProductSalesInsights";
 import { currencyItem, countItem } from "@/lib/reportSummaryItems";
 import { ReportTable } from "@/components/reports/ReportTable";
 import { ExportBar } from "@/components/reports/ExportBar";
+import { RecordPaymentModal } from "@/components/payments/RecordPaymentModal";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useClients } from "@/hooks/useClients";
 import { usePayments } from "@/hooks/usePayments";
+import { useProducts } from "@/hooks/useProducts";
+import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
 import {
   defaultFilters,
   type ReportId,
@@ -31,10 +38,19 @@ import {
   buildOutstandingReportRows,
   buildClientSummaryRows,
   REPORT_DEFINITIONS,
+  DATE_PRESET_LABELS,
 } from "@/lib/reports";
+import {
+  computeBusinessPulse,
+  computeAttentionItems,
+} from "@/lib/intelligence";
+import { getComparablePeriodWindow } from "@/lib/periodComparison";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { downloadCsv } from "@/lib/csvExport";
 import { Toast } from "@/components/shared/Toast";
+import { PulseStat } from "@/components/intelligence/PulseStat";
+import { AttentionList } from "@/components/intelligence/AttentionList";
+import type { Payment, RecordPaymentResult } from "@/types";
 
 const METHOD_LABELS: Record<string, string> = {
   bank_transfer: "Bank transfer",
@@ -45,16 +61,23 @@ const METHOD_LABELS: Record<string, string> = {
 };
 
 export function ReportsPage() {
-  const { data: invoices, loading: invoicesLoading, error } = useInvoices();
+  const { data: invoices, loading: invoicesLoading, error, reload } = useInvoices();
   const { data: clients } = useClients();
   const { data: payments } = usePayments();
+  const { data: products } = useProducts();
+  const { navigateToInvoiceDetail } = useWorkspaceStore();
 
   const now = useMemo(() => new Date(), []);
   const [reportId, setReportId] = useState<ReportId>("revenue");
   const [filters, setFilters] = useState<ReportFilterState>(() => defaultFilters(now));
+  const [recordOpen, setRecordOpen] = useState(false);
+  const [replacementTarget, setReplacementTarget] = useState<Payment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const loading = invoicesLoading || !invoices || !clients || !payments;
+
+  // Period window for trends (workspace-wide, not filtered)
+  const periodWindow = useMemo(() => getComparablePeriodWindow(now), [now]);
 
   const filteredInvoices = useMemo(
     () => (invoices ? filterInvoices(invoices, filters, now) : []),
@@ -85,14 +108,28 @@ export function ReportsPage() {
     () => buildClientSummaryRows(filteredInvoices, filteredPayments, clients ?? [], now),
     [filteredInvoices, filteredPayments, clients, now],
   );
+  const billedInvoices = useMemo(
+    () => (invoices ?? []).filter((invoice) => !invoice.isDraft),
+    [invoices],
+  );
 
   // Per-report summaries - each report type shows only what's relevant to it.
   const revenueSummary = useMemo(() => computeRevenueSummary(filteredInvoices, filteredPayments, now), [filteredInvoices, filteredPayments, now]);
   const invoiceSummary = useMemo(() => computeInvoiceSummary(filteredInvoices, now), [filteredInvoices, now]);
   const paymentSummary = useMemo(() => computePaymentSummary(filteredPayments), [filteredPayments]);
   const outstandingSummary = useMemo(() => computeOutstandingSummary(filteredInvoices, filteredPayments, now), [filteredInvoices, filteredPayments, now]);
-  const overdueSummary = useMemo(() => computeOverdueSummary(filteredInvoices, now), [filteredInvoices, now]);
+  const overdueSummary = useMemo(() => computeOverdueSummary(filteredInvoices, filteredPayments, now), [filteredInvoices, filteredPayments, now]);
   const clientSummaryTotals = useMemo(() => computeClientSummaryTotals(clientSummaryRows), [clientSummaryRows]);
+
+  // Business Pulse and Attention Center - use full dataset (not filtered) for cross-period comparisons
+  const pulse = useMemo(
+    () => (invoices && payments ? computeBusinessPulse(invoices, payments, now) : undefined),
+    [invoices, payments, now],
+  );
+  const attentionItems = useMemo(
+    () => (invoices && clients && payments ? computeAttentionItems(invoices, clients, payments, now) : []),
+    [invoices, clients, payments, now],
+  );
 
   const activeDefinition = REPORT_DEFINITIONS.find((r) => r.id === reportId)!;
 
@@ -156,6 +193,22 @@ export function ReportsPage() {
     setToast("CSV export downloaded.");
   }
 
+  function handlePersisted(result: RecordPaymentResult) {
+    // reload is returned from useInvoices hook
+    reload();
+    setToast(`Payment of ${formatCurrency(result.payment.amount)} recorded`);
+  }
+
+  function closeRecordPayment() {
+    setRecordOpen(false);
+    setReplacementTarget(null);
+  }
+
+  function handleRecorded(result: RecordPaymentResult) {
+    closeRecordPayment();
+    setToast(`Payment of ${formatCurrency(result.payment.amount)} recorded`);
+  }
+
   if (error) {
     return (
       <div>
@@ -171,32 +224,189 @@ export function ReportsPage() {
     <div>
       <PageHeader title="Reports" subtitle="A clear view of your billing and financial activity" />
 
-      <div className="px-10 py-8">
+      <main className="mx-auto max-w-[1480px] px-5 py-8 sm:px-8 lg:px-12">
         {loading ? (
           <OverviewSkeleton />
         ) : (
           <div className="space-y-6">
             <ReportTypeTabs active={reportId} onSelect={setReportId} />
 
+            {/* Filter toolbar — compact, responsive layout */}
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <ReportFilters filters={filters} onChange={setFilters} clients={clients} />
-              <ExportBar onExportExcel={handleExportExcel} onExportCsv={handleExportCsv} onPrint={handlePrint} />
+              <div className="flex-1 min-w-0">
+                <ReportFilters filters={filters} onChange={setFilters} clients={clients} />
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <ExportBar onExportExcel={handleExportExcel} onExportCsv={handleExportCsv} onPrint={handlePrint} />
+              </div>
             </div>
 
-            <div>
-              <p className="text-sm font-medium text-ink">{activeDefinition.title}</p>
-              <p className="mt-0.5 text-xs text-ink-muted">{activeDefinition.description}</p>
+            {/* Result context — shows active date range and filter state */}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-ink-muted px-4 py-3 rounded-lg bg-surface border border-border">
+              <span className="font-medium text-ink">Showing:</span>
+              <span>
+                {filters.preset !== "custom"
+                  ? DATE_PRESET_LABELS[filters.preset]
+                  : `${filters.from ? formatDate(filters.from) : "start"} to ${filters.to ? formatDate(filters.to) : "now"}`}
+              </span>
+              {filters.clientId && (
+                <>
+                  <span className="text-ink-muted">|</span>
+                  <span>
+                    Client: {clients?.find((c) => c.id === filters.clientId)?.name ?? filters.clientId}
+                  </span>
+                </>
+              )}
+              {filters.status && (
+                <>
+                  <span className="text-ink-muted">|</span>
+                  <span>
+                    Status: {STATUS_OPTIONS.find((s) => s.value === filters.status)?.label ?? filters.status}
+                  </span>
+                </>
+              )}
+              <span className="ml-auto text-ink-faint">
+                {filteredInvoices.length} invoice{filteredInvoices.length === 1 ? "" : "s"}
+              </span>
             </div>
 
-            {reportId === "revenue" && (
-              <ReportSummary
-                items={[
-                  currencyItem("Billed", revenueSummary.billed),
-                  currencyItem("Received", revenueSummary.collected),
-                  currencyItem("Outstanding", revenueSummary.outstanding, revenueSummary.outstanding > 0),
-                ]}
-              />
+            {/* KPI Cards for Revenue report — three aligned cards with visual hierarchy */}
+            {reportId === "revenue" && revenueSummary && (
+              <section className="space-y-4" aria-label="Revenue KPIs">
+                <p className="text-sm font-medium text-ink">Revenue Overview</p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <KPICard
+                    label="Billed"
+                    value={formatCurrency(revenueSummary.billed)}
+                    caution={revenueSummary.outstanding > 0}
+                  />
+                  <KPICard
+                    label="Received"
+                    value={formatCurrency(revenueSummary.collected)}
+                  />
+                  <KPICard
+                    label="Outstanding"
+                    value={formatCurrency(revenueSummary.outstanding)}
+                    caution={revenueSummary.outstanding > 0}
+                  />
+                </div>
+              </section>
             )}
+
+            {/* Business Pulse — workspace-wide snapshot (all time), shown for non-Revenue reports */}
+            {pulse && reportId !== "revenue" && (
+              <section className="space-y-4" aria-label="Business Pulse">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-ink">Business Pulse</p>
+                  <span className="text-xs text-ink-muted">Workspace-wide, all time</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-8 gap-y-6 border-y border-border py-6 sm:grid-cols-3 lg:grid-cols-6">
+                  <PulseStat
+                    label="Billed"
+                    amount={pulse.billed.amount}
+                    timeframe={pulse.periodLabel}
+                    changePct={pulse.billed.comparable ? pulse.billed.changePct : undefined}
+                    changeLabel={pulse.billed.comparable ? `vs ${pulse.comparableLabel}` : undefined}
+                    comparisonUnavailable={pulse.hasComparableHistory && !pulse.billed.comparable}
+                  />
+                  <PulseStat
+                    label="Received"
+                    amount={pulse.collected.amount}
+                    timeframe={pulse.periodLabel}
+                    changePct={pulse.collected.comparable ? pulse.collected.changePct : undefined}
+                    changeLabel={pulse.collected.comparable ? `vs ${pulse.comparableLabel}` : undefined}
+                    comparisonUnavailable={pulse.hasComparableHistory && !pulse.collected.comparable}
+                  />
+                  <PulseStat
+                    label="Outstanding"
+                    amount={pulse.totalOutstanding}
+                    timeframe={`${pulse.outstandingInvoiceCount} invoice${pulse.outstandingInvoiceCount === 1 ? "" : "s"} outstanding or overdue`}
+                  />
+                  <PulseStat
+                    label="Overdue"
+                    amount={pulse.totalOverdue}
+                    tone="caution"
+                    timeframe={`${pulse.overdueInvoiceCount} invoice${pulse.overdueInvoiceCount === 1 ? "" : "s"} past due`}
+                  />
+                  <PulseStat
+                    label="Invoices issued"
+                    display={String(pulse.invoicesIssuedThisPeriod)}
+                    timeframe={pulse.periodLabel}
+                  />
+                  <PulseStat
+                    label="Clients billed"
+                    display={String(pulse.activeClientsThisPeriod)}
+                    timeframe={pulse.periodLabel}
+                  />
+                </div>
+              </section>
+            )}
+
+            {/* Attention Center — workspace-wide, shown for non-Revenue reports */}
+            {pulse && reportId !== "revenue" && (
+              <section className="space-y-4" aria-label="Attention Center">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-ink">Attention Center</p>
+                  <span className="text-xs text-ink-muted">Workspace-wide, all time</span>
+                </div>
+                {attentionItems.length === 0 ? (
+                  <EmptyState
+                    icon={Sparkles}
+                    title="Nothing needs attention"
+                    description="No invoices are overdue, unusually large, or due imminently, and payments are coming in normally. This list will surface anything that needs a decision as soon as it comes up."
+                  />
+                ) : (
+                  <AttentionList items={attentionItems} onOpenInvoice={navigateToInvoiceDetail} />
+                )}
+              </section>
+            )}
+
+            {/* Collection Outlook — shows unpaid invoices with due dates and outstanding amounts for the current filter scope */}
+            <CollectionOutlook
+              invoices={filteredInvoices}
+              payments={filteredPayments}
+              clients={clients ?? []}
+              asOf={now}
+            />
+
+            {/* Data Quality Checks — workspace-wide checks for data consistency issues */}
+            <DataQualityChecks
+              invoices={invoices ?? []}
+              payments={payments ?? []}
+              clients={clients ?? []}
+              asOf={now}
+              onNavigateToInvoice={navigateToInvoiceDetail}
+            />
+
+            {/* Client Trends — period-over-period client performance */}
+            <ClientTrends
+              invoices={invoices ?? []}
+              payments={payments ?? []}
+              clients={clients ?? []}
+              asOf={now}
+              currentStart={periodWindow.currentStart}
+              currentEnd={periodWindow.currentEnd}
+              comparableStart={periodWindow.comparableStart}
+              comparableEnd={periodWindow.comparableEnd}
+            />
+
+            {/* Product Sales Insights — period-over-period product performance */}
+            <ProductSalesInsights
+              invoices={invoices ?? []}
+              products={products ?? []}
+              currentStart={periodWindow.currentStart}
+              currentEnd={periodWindow.currentEnd}
+              comparableStart={periodWindow.comparableStart}
+              comparableEnd={periodWindow.comparableEnd}
+            />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-ink">{activeDefinition.title}</p>
+                <p className="mt-0.5 text-xs text-ink-muted">{activeDefinition.description}</p>
+              </div>
+            </div>
+
             {reportId === "invoices" && (
               <ReportSummary
                 items={[
@@ -253,23 +463,23 @@ export function ReportsPage() {
               ) : (
                 <ReportTable
                   columns={[
-                    { key: "number", label: "Invoice" },
-                    { key: "client", label: "Client" },
-                    { key: "date", label: "Date" },
-                    { key: "amount", label: "Amount", align: "right" },
-                    { key: "status", label: "Status" },
+                    { key: "number", label: "Invoice", width: "w-[130px]" },
+                    { key: "client", label: "Client", width: "w-[200px] min-w-[140px]" },
+                    { key: "date", label: "Date", width: "w-[100px]" },
+                    { key: "amount", label: "Amount", align: "right", width: "w-[120px]" },
+                    { key: "status", label: "Status", width: "w-[120px]" },
                   ]}
                   rows={invoiceRows}
                   rowKey={(r) => r.id}
                   renderRow={(r) => (
                     <>
-                      <td className="px-4 py-2.5 font-medium text-accent">
+                      <td className="px-4 py-2.5 font-medium text-accent w-[130px]">
                         <InvoiceNumberLink invoice={{ id: r.id, number: r.number }} className="text-accent" />
                       </td>
-                      <td className="px-4 py-2.5 text-ink-muted">{r.clientName}</td>
-                      <td className="px-4 py-2.5 text-ink-muted">{formatDate(r.issueDate)}</td>
-                      <td className="font-tabular px-4 py-2.5 text-right text-ink">{formatCurrency(r.amount)}</td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5 text-ink-muted truncate w-[200px] min-w-[140px]">{r.clientName}</td>
+                      <td className="px-4 py-2.5 text-ink-muted whitespace-nowrap w-[100px]">{formatDate(r.issueDate)}</td>
+                      <td className="font-tabular px-4 py-2.5 text-right text-ink w-[120px] whitespace-nowrap">{formatCurrency(r.amount)}</td>
+                      <td className="px-4 py-2.5 w-[120px]">
                         <StatusChip
                           info={{ status: r.status, daysOverdue: 0, severity: null }}
                           labelOverride={r.status === "pending" ? "Outstanding" : undefined}
@@ -280,7 +490,6 @@ export function ReportsPage() {
                 />
               )
             )}
-
             {reportId === "invoices" && (
               invoiceRows.length === 0 ? (
                 <EmptyState
@@ -291,25 +500,25 @@ export function ReportsPage() {
               ) : (
                 <ReportTable
                   columns={[
-                    { key: "number", label: "Invoice" },
-                    { key: "client", label: "Client" },
-                    { key: "date", label: "Date" },
-                    { key: "due", label: "Due date" },
-                    { key: "amount", label: "Amount", align: "right" },
-                    { key: "status", label: "Status" },
+                    { key: "number", label: "Invoice", width: "w-[130px]" },
+                    { key: "client", label: "Client", width: "w-[200px] min-w-[140px]" },
+                    { key: "date", label: "Date", width: "w-[100px]" },
+                    { key: "due", label: "Due date", width: "w-[100px]" },
+                    { key: "amount", label: "Amount", align: "right", width: "w-[120px]" },
+                    { key: "status", label: "Status", width: "w-[120px]" },
                   ]}
                   rows={invoiceRows}
                   rowKey={(r) => r.id}
                   renderRow={(r) => (
                     <>
-                      <td className="px-4 py-2.5 font-medium text-accent">
+                      <td className="px-4 py-2.5 font-medium text-accent w-[130px]">
                         <InvoiceNumberLink invoice={{ id: r.id, number: r.number }} className="text-accent" />
                       </td>
-                      <td className="px-4 py-2.5 text-ink-muted">{r.clientName}</td>
-                      <td className="px-4 py-2.5 text-ink-muted">{formatDate(r.issueDate)}</td>
-                      <td className="px-4 py-2.5 text-ink-muted">{formatDate(r.dueDate)}</td>
-                      <td className="font-tabular px-4 py-2.5 text-right text-ink">{formatCurrency(r.amount)}</td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5 text-ink-muted truncate w-[200px] min-w-[140px]">{r.clientName}</td>
+                      <td className="px-4 py-2.5 text-ink-muted whitespace-nowrap w-[100px]">{formatDate(r.issueDate)}</td>
+                      <td className="px-4 py-2.5 text-ink-muted whitespace-nowrap w-[100px]">{formatDate(r.dueDate)}</td>
+                      <td className="font-tabular px-4 py-2.5 text-right text-ink w-[120px] whitespace-nowrap">{formatCurrency(r.amount)}</td>
+                      <td className="px-4 py-2.5 w-[120px]">
                         <StatusChip
                           info={{ status: r.status, daysOverdue: 0, severity: null }}
                           labelOverride={r.status === "pending" ? "Outstanding" : undefined}
@@ -320,7 +529,6 @@ export function ReportsPage() {
                 />
               )
             )}
-
             {reportId === "payments" && (
               paymentRows.length === 0 ? (
                 <EmptyState
@@ -331,19 +539,19 @@ export function ReportsPage() {
               ) : (
                 <ReportTable
                   columns={[
-                    { key: "id", label: "Payment" },
-                    { key: "invoice", label: "Invoice" },
-                    { key: "client", label: "Client" },
-                    { key: "date", label: "Date" },
-                    { key: "amount", label: "Amount", align: "right" },
-                    { key: "method", label: "Method" },
+                    { key: "id", label: "Payment", width: "w-[100px]" },
+                    { key: "invoice", label: "Invoice", width: "w-[130px]" },
+                    { key: "client", label: "Client", width: "w-[200px] min-w-[140px]" },
+                    { key: "date", label: "Date", width: "w-[100px]" },
+                    { key: "amount", label: "Amount", align: "right", width: "w-[120px]" },
+                    { key: "method", label: "Method", width: "w-[130px]" },
                   ]}
                   rows={paymentRows}
                   rowKey={(r) => r.id}
                   renderRow={(r) => (
                     <>
-                      <td className="px-4 py-2.5 font-medium text-ink">{r.id}</td>
-                      <td className="px-4 py-2.5 text-accent">
+                      <td className="px-4 py-2.5 font-medium text-ink w-[100px]">{r.id}</td>
+                      <td className="px-4 py-2.5 text-accent w-[130px]">
                         {invoices?.some((invoice) => invoice.id === r.invoiceId) ? (
                           <InvoiceNumberLink
                             invoice={{ id: r.invoiceId, number: r.invoiceNumber }}
@@ -353,10 +561,10 @@ export function ReportsPage() {
                           r.invoiceNumber
                         )}
                       </td>
-                      <td className="px-4 py-2.5 text-ink-muted">{r.clientName}</td>
-                      <td className="px-4 py-2.5 text-ink-muted">{formatDate(r.receivedAt)}</td>
-                      <td className="font-tabular px-4 py-2.5 text-right text-success">{formatCurrency(r.amount)}</td>
-                      <td className="px-4 py-2.5 text-ink-muted">{METHOD_LABELS[r.method] ?? r.method}</td>
+                      <td className="px-4 py-2.5 text-ink-muted truncate w-[200px] min-w-[140px]">{r.clientName}</td>
+                      <td className="px-4 py-2.5 text-ink-muted whitespace-nowrap w-[100px]">{formatDate(r.receivedAt)}</td>
+                      <td className="font-tabular px-4 py-2.5 text-right text-success w-[120px] whitespace-nowrap">{formatCurrency(r.amount)}</td>
+                      <td className="px-4 py-2.5 w-[130px]">{METHOD_LABELS[r.method] ?? r.method}</td>
                     </>
                   )}
                 />
@@ -373,27 +581,27 @@ export function ReportsPage() {
               ) : (
                 <ReportTable
                   columns={[
-                    { key: "client", label: "Client" },
-                    { key: "invoice", label: "Invoice" },
-                    { key: "total", label: "Total", align: "right" },
-                    { key: "paid", label: "Paid", align: "right" },
-                    { key: "outstanding", label: "Outstanding", align: "right" },
-                    { key: "due", label: "Due date" },
-                    { key: "status", label: "Status" },
+                    { key: "client", label: "Client", width: "w-[200px] min-w-[140px]" },
+                    { key: "invoice", label: "Invoice", width: "w-[130px]" },
+                    { key: "total", label: "Total", align: "right", width: "w-[120px]" },
+                    { key: "paid", label: "Paid", align: "right", width: "w-[120px]" },
+                    { key: "outstanding", label: "Outstanding", align: "right", width: "w-[120px]" },
+                    { key: "due", label: "Due date", width: "w-[100px]" },
+                    { key: "status", label: "Status", width: "w-[120px]" },
                   ]}
                   rows={outstandingRows}
                   rowKey={(r) => r.id}
                   renderRow={(r) => (
                     <>
-                      <td className="px-4 py-2.5 text-ink-muted">{r.clientName}</td>
-                      <td className="px-4 py-2.5 font-medium text-accent">
+                      <td className="px-4 py-2.5 text-ink-muted truncate w-[200px] min-w-[140px]">{r.clientName}</td>
+                      <td className="px-4 py-2.5 font-medium text-accent w-[130px]">
                         <InvoiceNumberLink invoice={{ id: r.id, number: r.invoiceNumber }} className="text-accent" />
                       </td>
-                      <td className="font-tabular px-4 py-2.5 text-right text-ink-muted">{formatCurrency(r.total)}</td>
-                      <td className="font-tabular px-4 py-2.5 text-right text-ink-muted">{formatCurrency(r.paid)}</td>
-                      <td className="font-tabular px-4 py-2.5 text-right font-medium text-ink">{formatCurrency(r.outstanding)}</td>
-                      <td className="px-4 py-2.5 text-ink-muted">{formatDate(r.dueDate)}</td>
-                      <td className="px-4 py-2.5">
+                      <td className="font-tabular px-4 py-2.5 text-right text-ink-muted w-[120px] whitespace-nowrap">{formatCurrency(r.total)}</td>
+                      <td className="font-tabular px-4 py-2.5 text-right text-ink-muted w-[120px] whitespace-nowrap">{formatCurrency(r.paid)}</td>
+                      <td className="font-tabular px-4 py-2.5 text-right font-medium text-ink w-[120px] whitespace-nowrap">{formatCurrency(r.outstanding)}</td>
+                      <td className="px-4 py-2.5 text-ink-muted whitespace-nowrap w-[100px]">{formatDate(r.dueDate)}</td>
+                      <td className="px-4 py-2.5 w-[120px]">
                         <StatusChip
                           info={{ status: r.status, daysOverdue: 0, severity: null }}
                           labelOverride={r.status === "pending" ? "Outstanding" : undefined}
@@ -415,25 +623,25 @@ export function ReportsPage() {
               ) : (
                 <ReportTable
                   columns={[
-                    { key: "client", label: "Client" },
-                    { key: "invoice", label: "Invoice" },
-                    { key: "total", label: "Total", align: "right" },
-                    { key: "paid", label: "Paid", align: "right" },
-                    { key: "outstanding", label: "Outstanding", align: "right" },
-                    { key: "due", label: "Due date" },
+                    { key: "client", label: "Client", width: "w-[200px] min-w-[140px]" },
+                    { key: "invoice", label: "Invoice", width: "w-[130px]" },
+                    { key: "total", label: "Total", align: "right", width: "w-[120px]" },
+                    { key: "paid", label: "Paid", align: "right", width: "w-[120px]" },
+                    { key: "outstanding", label: "Outstanding", align: "right", width: "w-[120px]" },
+                    { key: "due", label: "Due date", width: "w-[100px]" },
                   ]}
                   rows={overdueRows}
                   rowKey={(r) => r.id}
                   renderRow={(r) => (
                     <>
-                      <td className="px-4 py-2.5 text-ink-muted">{r.clientName}</td>
-                      <td className="px-4 py-2.5 font-medium text-accent">
+                      <td className="px-4 py-2.5 text-ink-muted truncate w-[200px] min-w-[140px]">{r.clientName}</td>
+                      <td className="px-4 py-2.5 font-medium text-accent w-[130px]">
                         <InvoiceNumberLink invoice={{ id: r.id, number: r.invoiceNumber }} className="text-accent" />
                       </td>
-                      <td className="font-tabular px-4 py-2.5 text-right text-ink-muted">{formatCurrency(r.total)}</td>
-                      <td className="font-tabular px-4 py-2.5 text-right text-ink-muted">{formatCurrency(r.paid)}</td>
-                      <td className="font-tabular px-4 py-2.5 text-right font-medium text-overdue">{formatCurrency(r.outstanding)}</td>
-                      <td className="px-4 py-2.5 text-ink-muted">{formatDate(r.dueDate)}</td>
+                      <td className="font-tabular px-4 py-2.5 text-right text-ink-muted w-[120px] whitespace-nowrap">{formatCurrency(r.total)}</td>
+                      <td className="font-tabular px-4 py-2.5 text-right text-ink-muted w-[120px] whitespace-nowrap">{formatCurrency(r.paid)}</td>
+                      <td className="font-tabular px-4 py-2.5 text-right font-medium text-overdue w-[120px] whitespace-nowrap">{formatCurrency(r.outstanding)}</td>
+                      <td className="px-4 py-2.5 text-ink-muted whitespace-nowrap w-[100px]">{formatDate(r.dueDate)}</td>
                     </>
                   )}
                 />
@@ -450,21 +658,21 @@ export function ReportsPage() {
               ) : (
                 <ReportTable
                   columns={[
-                    { key: "client", label: "Client" },
-                    { key: "invoices", label: "Invoices", align: "right" },
-                    { key: "billed", label: "Total billed", align: "right" },
-                    { key: "collected", label: "Total received", align: "right" },
-                    { key: "outstanding", label: "Outstanding", align: "right" },
+                    { key: "client", label: "Client", width: "w-[200px] min-w-[140px]" },
+                    { key: "invoices", label: "Invoices", align: "right", width: "w-[80px]" },
+                    { key: "billed", label: "Total billed", align: "right", width: "w-[120px]" },
+                    { key: "collected", label: "Total received", align: "right", width: "w-[120px]" },
+                    { key: "outstanding", label: "Outstanding", align: "right", width: "w-[120px]" },
                   ]}
                   rows={clientSummaryRows}
                   rowKey={(r) => r.clientId}
                   renderRow={(r) => (
                     <>
-                      <td className="px-4 py-2.5 font-medium text-ink">{r.clientName}</td>
-                      <td className="font-tabular px-4 py-2.5 text-right text-ink-muted">{r.invoiceCount}</td>
-                      <td className="font-tabular px-4 py-2.5 text-right text-ink-muted">{formatCurrency(r.totalBilled)}</td>
-                      <td className="font-tabular px-4 py-2.5 text-right text-success">{formatCurrency(r.totalCollected)}</td>
-                      <td className="font-tabular px-4 py-2.5 text-right font-medium text-ink">{formatCurrency(r.outstanding)}</td>
+                      <td className="px-4 py-2.5 font-medium text-ink truncate w-[200px] min-w-[140px]">{r.clientName}</td>
+                      <td className="font-tabular px-4 py-2.5 text-right text-ink-muted w-[80px] whitespace-nowrap">{r.invoiceCount}</td>
+                      <td className="font-tabular px-4 py-2.5 text-right text-ink-muted w-[120px] whitespace-nowrap">{formatCurrency(r.totalBilled)}</td>
+                      <td className="font-tabular px-4 py-2.5 text-right text-success w-[120px] whitespace-nowrap">{formatCurrency(r.totalCollected)}</td>
+                      <td className="font-tabular px-4 py-2.5 text-right font-medium text-ink w-[120px] whitespace-nowrap">{formatCurrency(r.outstanding)}</td>
                     </>
                   )}
                 />
@@ -472,8 +680,17 @@ export function ReportsPage() {
             )}
           </div>
         )}
-      </div>
+      </main>
 
+      <RecordPaymentModal
+        open={recordOpen || Boolean(replacementTarget)}
+        onClose={closeRecordPayment}
+        invoices={billedInvoices}
+        clients={clients}
+        paymentToReplace={replacementTarget ?? undefined}
+        onPersisted={handlePersisted}
+        onRecorded={handleRecorded}
+      />
       <Toast message={toast} onDismiss={() => setToast(null)} />
     </div>
   );

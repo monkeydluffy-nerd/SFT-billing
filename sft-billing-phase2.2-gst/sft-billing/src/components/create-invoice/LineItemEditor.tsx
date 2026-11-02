@@ -95,10 +95,19 @@ export function LineItemEditor({ items, products, onChange, errors }: LineItemEd
 
   function productSuggestions(query: string): Product[] {
     if (!query.trim()) return [];
-    return products
+    // Filter out archived products from suggestions
+    const activeProducts = products;
+    return activeProducts
       .map((product) => ({ product, match: fuzzyMatch(query, product.name) }))
       .filter(({ match }) => match.matches)
-      .sort((a, b) => a.match.score - b.match.score)
+      .sort((a, b) => {
+        // Exact code match ranks first
+        const aCodeMatch = a.product.code.toLowerCase().includes(query.toLowerCase());
+        const bCodeMatch = b.product.code.toLowerCase().includes(query.toLowerCase());
+        if (aCodeMatch && !bCodeMatch) return -1;
+        if (!aCodeMatch && bCodeMatch) return 1;
+        return a.match.score - b.match.score;
+      })
       .map(({ product }) => product)
       .slice(0, 5);
   }
@@ -136,7 +145,7 @@ export function LineItemEditor({ items, products, onChange, errors }: LineItemEd
                     }}
                     onFocus={() => setSuggestFor(item.id)}
                     onBlur={() => setTimeout(() => setSuggestFor((cur) => (cur === item.id ? null : cur)), 120)}
-                    placeholder="Consulting hours, hosting, license…"
+                    placeholder="Type to search materials…"
                     className={cn(
                       "h-9 w-full rounded-md border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint",
                       error ? "border-overdue" : "border-border focus:border-border-strong",
@@ -165,7 +174,15 @@ export function LineItemEditor({ items, products, onChange, errors }: LineItemEd
                           }}
                           className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-canvas"
                         >
-                          <span className="truncate">{product.name}</span>
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span
+                              className="flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-mono text-premium bg-premium/10 whitespace-nowrap"
+                              title={product.code}
+                            >
+                              {product.code}
+                            </span>
+                            <span className="truncate">{product.name}</span>
+                          </div>
                           <span className="font-tabular shrink-0 text-xs text-ink-faint">{formatCurrency(product.defaultUnitPrice)}/{product.unit}</span>
                         </button>
                       ))}

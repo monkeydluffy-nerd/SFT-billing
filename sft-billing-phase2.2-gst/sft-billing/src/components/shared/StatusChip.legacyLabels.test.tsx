@@ -29,10 +29,9 @@ describe("Unit: Reports/Intelligence/Workspace Settings/AURA labels are unchange
 
   it("Reports/Intelligence/Workspace Settings still import StatusChip + getInvoiceStatus, not LedgerStatusChip/getInvoiceLedgerStatus", () => {
     const reports = readSource("pages/ReportsPage.tsx");
-    const intelligence = readSource("pages/IntelligencePage.tsx");
     const settings = readSource("pages/WorkspaceSettingsPage.tsx");
 
-    for (const source of [reports, intelligence, settings]) {
+    for (const source of [reports, settings]) {
       expect(source).not.toContain("LedgerStatusChip");
       expect(source).not.toContain("getInvoiceLedgerStatus");
     }

@@ -30,7 +30,6 @@ function makeClient(overrides: Partial<Client>): Client {
     contactName: "Contact",
     email: "x@example.com",
     billingAddress: "",
-    clientSince: "2026-01-01",
     ...overrides,
   };
 }

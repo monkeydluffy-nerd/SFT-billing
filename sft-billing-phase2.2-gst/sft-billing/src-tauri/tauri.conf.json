@@ -1,0 +1,115 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "build": {
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist",
+    "withGlobalTauri": true
+  },
+  "package": {
+    "productName": "SFT Billing",
+    "version": "0.1.1"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "fs": {
+        "all": true,
+        "readFile": true,
+        "writeFile": true,
+        "readDir": true,
+        "copyFile": true,
+        "createDir": true,
+        "removeFile": true,
+        "removeDir": true,
+        "renameFile": true,
+        "exists": true
+      },
+      "shell": {
+        "all": false,
+        "open": true,
+        "sidecar": true,
+        "scope": [
+          {
+            "name": "sft-billing-backend",
+            "cmd": "sft-billing-backend",
+            "args": ["--port", "${SFT_BILLING_BACKEND_PORT}"]
+          }
+        ]
+      },
+      "http": {
+        "all": true,
+        "request": true,
+        "scope": ["http://127.0.0.1:8000/**", "http://127.0.0.1:8001/**", "http://127.0.0.1:8002/**", "http://127.0.0.1:8003/**", "http://127.0.0.1:8004/**", "http://127.0.0.1:8005/**", "http://127.0.0.1:8006/**", "http://127.0.0.1:8007/**", "http://127.0.0.1:8008/**", "http://127.0.0.1:8009/**", "http://127.0.0.1:8010/**"]
+      },
+      "path": {
+        "all": true
+      },
+      "process": {
+        "all": false,
+        "exit": true,
+        "relaunch": true,
+        "relaunchDangerousAllowSymlinkMacos": false
+      }
+    },
+    "bundle": {
+      "active": true,
+      "category": "Business",
+      "copyright": "© 2026 SURFINE TECHNOLOGY",
+      "deb": {
+        "depends": []
+      },
+      "externalBin": ["sft-billing-backend"],
+      "icon": [
+        "icons/16x16.png",
+        "icons/24x24.png",
+        "icons/32x32.png",
+        "icons/48x48.png",
+        "icons/64x64.png",
+        "icons/128x128.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "identifier": "com.sft.billing",
+      "longDescription": "SFT Billing - Premium office billing and financial management desktop application",
+      "macOS": {
+        "entitlements": null,
+        "exceptionDomain": "",
+        "frameworks": [],
+        "providerShortName": null,
+        "signingIdentity": null
+      },
+      "publisher": "SURFINE TECHNOLOGY",
+      "resources": ["sft_billing_initial.db"],
+      "shortDescription": "SFT Billing Desktop App",
+      "targets": ["nsis", "msi"],
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": "",
+        "webviewInstallMode": {
+          "type": "embedBootstrapper"
+        },
+        "nsis": {}
+      }
+    },
+    "security": {
+      "csp": "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http://127.0.0.1:8000 http://127.0.0.1:8001 http://127.0.0.1:8002 http://127.0.0.1:8003 http://127.0.0.1:8003 http://127.0.0.1:8004 http://127.0.0.1:8005 http://127.0.0.1:8006 http://127.0.0.1:8007 http://127.0.0.1:8008 http://127.0.0.1:8009 http://127.0.0.1:8010;"
+    },
+    "updater": {
+      "active": false
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "height": 800,
+        "resizable": true,
+        "title": "SFT Billing",
+        "width": 1200,
+        "minHeight": 600,
+        "minWidth": 800,
+        "visible": false
+      }
+    ]
+  }
+}

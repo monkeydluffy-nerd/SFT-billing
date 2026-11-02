@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 220" width="520" height="220" role="img" aria-label="Technical drawing of a precision pin, 10 millimetre diameter by 70 millimetre length">
+  <title>Precision pin 10 x 70</title>
+  <g id="drawing" fill="none" stroke="#D8BE8F" stroke-width="1.2" stroke-linejoin="round">
+    <g id="part">
+      <path id="centerline" d="M20 110H500" stroke-dasharray="14 3 2 3" stroke-opacity=".45"/>
+      <path id="head" d="M60 72H96V148H60Z"/>
+      <path id="shank-and-chamfer" d="M96 88H430L446 100V120L430 132H96"/>
+      <path id="groove" d="M356 88V132M364 88V132" stroke-opacity=".7"/>
+      <path id="cross-hole" d="M400 103a7 7 0 1 0 .01 0" stroke-opacity=".7"/>
+    </g>
+    <g id="dimensions" stroke-opacity=".6">
+      <path id="length-dimension" d="M96 132V190M446 120V190M96 182H446M96 176V188M446 176V188"/>
+      <path id="diameter-dimension" d="M446 88H486M446 132H486M478 88V132M473 88H483M473 132H483"/>
+    </g>
+  </g>
+  <g id="labels" font-family="Inter, 'Inter Variable', sans-serif" font-size="12" fill="#D8BE8F" letter-spacing=".08em">
+    <text id="label-length" x="271" y="174" text-anchor="middle">70</text>
+    <text id="label-diameter" x="492" y="114">Ø10</text>
+  </g>
+</svg>

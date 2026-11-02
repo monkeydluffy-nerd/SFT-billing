@@ -13,8 +13,11 @@
 :root {
   /* Surfaces */
   --color-canvas: 247 245 241;         /* #F7F5F1 warm off-white page background */
+  --color-header: 247 245 241;
   --color-surface: 255 255 255;        /* #FFFFFF elevated / card surfaces */
   --color-surface-raised: 255 255 255; /* surfaces floating above surface (modals, palette) */
+  --color-chart-billed: 31 90 68;
+  --color-chart-received: 59 130 246;
 
   /* Surfine shell */
   --color-sidebar: 19 35 29;           /* deep forest green */
@@ -37,6 +40,7 @@
 
   /* AURA identity accent — used only for AURA's mark and its panel, never for status */
   --color-premium: 156 122 60;         /* #9C7A3C muted champagne / bronze */
+  --color-premium-bg: 245 240 230;     /* soft gold background */
 
   /* Financial state colors — never used decoratively */
   --color-success: 31 90 68;           /* paid */
@@ -73,56 +77,335 @@
   /* Motion */
   --duration-micro: 160ms;
   --duration-panel: 260ms;
+
+  /* Wave animation */
+  --wave-duration: 36s;
+  --sweep-duration: 8s;
+  --pulse-duration: 2.4s;
 }
 
 .dark {
-  --color-canvas: 20 19 18;            /* warm near-black, never pure #000 */
-  --color-surface: 28 27 25;
-  --color-surface-raised: 34 33 30;
+  --color-canvas: 16 23 19;            /* #101713 near-black forest green */
+  --color-header: 20 29 24;            /* #141D18 */
+  --color-surface: 25 35 30;           /* #19231E */
+  --color-surface-raised: 32 44 37;    /* #202C25 */
+  --color-chart-billed: 52 122 96;
+  --color-chart-received: 124 157 139;
 
-  --color-sidebar: 11 24 19;
+  --color-sidebar: 20 29 24;
   --color-sidebar-ink: 240 238 229;
-  --color-sidebar-muted: 142 157 146;
-  --color-sidebar-border: 42 65 53;
+  --color-sidebar-muted: 170 175 168;
+  --color-sidebar-border: 48 61 53;
 
-  --color-ink: 240 238 233;
-  --color-ink-muted: 168 163 152;
-  --color-ink-faint: 110 106 98;
+  --color-ink: 242 238 229;            /* #F2EEE5 */
+  --color-ink-muted: 170 175 168;      /* #AAAFA8 */
+  --color-ink-faint: 133 142 134;      /* #858E86 */
 
-  --color-border: 51 49 44;
-  --color-border-strong: 68 65 58;
+  --color-border: 48 61 53;            /* #303D35 */
+  --color-border-strong: 65 82 71;
 
-  --color-accent: 62 138 109;          /* slightly desaturated/lightened so it doesn't vibrate on dark */
-  --color-accent-ink: 12 20 17;
+  --color-accent: 185 138 74;          /* #B98A4A Surfine copper */
+  --color-accent-ink: 16 23 19;
 
-  --color-premium: 189 155 96;
+  --color-premium: 185 138 74;
+  --color-premium-bg: 54 42 27;
 
-  --color-success: 62 138 109;
-  --color-success-bg: 34 48 42;
+  --color-success: 52 122 96;          /* #347A60 Surfine green */
+  --color-success-bg: 29 53 43;
 
-  --color-pending: 150 159 173;
-  --color-pending-bg: 39 44 51;
+  --color-pending: 170 183 174;
+  --color-pending-bg: 35 49 41;
 
-  --color-caution: 205 168 84;
-  --color-caution-bg: 51 43 24;
+  --color-caution: 214 171 105;
+  --color-caution-bg: 59 47 30;
 
-  --color-overdue: 200 108 105;
-  --color-overdue-bg: 54 33 32;
-  --color-overdue-strong: 214 129 126;
-  --color-overdue-strong-bg: 61 30 29;
+  --color-overdue: 205 126 116;
+  --color-overdue-bg: 61 39 36;
+  --color-overdue-strong: 220 145 134;
+  --color-overdue-strong-bg: 72 43 39;
 
-  --color-neutral: 158 152 141;
-  --color-neutral-bg: 45 43 39;
+  --color-neutral: 170 175 168;
+  --color-neutral-bg: 39 47 41;
 
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.24), 0 8px 24px -18px rgb(0 0 0 / 0.48);
-  --shadow-float: 0 8px 24px -8px rgb(0 0 0 / 0.4), 0 2px 6px -2px rgb(0 0 0 / 0.3);
-  --shadow-float-lg: 0 20px 48px -12px rgb(0 0 0 / 0.5), 0 4px 12px -4px rgb(0 0 0 / 0.35);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.18), 0 8px 24px -18px rgb(0 0 0 / 0.32);
+  --shadow-float: 0 8px 24px -8px rgb(0 0 0 / 0.26), 0 2px 6px -2px rgb(0 0 0 / 0.2);
+  --shadow-float-lg: 0 20px 48px -12px rgb(0 0 0 / 0.34), 0 4px 12px -4px rgb(0 0 0 / 0.24);
 }
 
-/* Tabular numerals for anything financial — the single detail that makes
-   columns of money feel trustworthy at a glance. */
+.dark .monthly-chart-tooltip-bg {
+  fill: rgb(var(--color-surface-raised));
+  stroke: rgb(var(--color-border-strong));
+  stroke-opacity: 1;
+}
+
+.dark .monthly-chart-tooltip-label {
+  fill: rgb(var(--color-ink));
+}
+
+.dark .monthly-chart-tooltip-billed {
+  fill: rgb(var(--color-success));
+}
+
+.dark .monthly-chart-tooltip-received {
+  fill: rgb(var(--color-chart-received));
+}
+
+ /* Tabular numerals for anything financial — the single detail that makes
+    columns of money feel trustworthy at a glance. */
 .font-tabular {
   font-variant-numeric: tabular-nums;
+}
+
+ /* Respect reduced-motion preferences globally. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Wave animation for header */
+@keyframes waveDrift {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-40px); }
+  100% { transform: translateX(0); }
+}
+
+/* Sweep for hero card */
+@keyframes heroSweep {
+  0% { transform: translateX(-100%) skewX(-15deg); opacity: 0; }
+  50% { opacity: 0.15; }
+  100% { transform: translateX(100%) skewX(-15deg); opacity: 0; }
+}
+
+/* Pulse for live indicators */
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.6; }
+}
+
+/* Pulse ring for sparkline last point */
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* Slide down for new activity */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Highlight fade for new items */
+@keyframes highlightFade {
+  0% { background-color: rgb(var(--color-premium) / 0.2); }
+  100% { background-color: transparent; }
+}
+
+/* Stagger fade up for cards */
+@keyframes staggerFadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Draw-in for sparklines */
+@keyframes drawIn {
+  from { stroke-dashoffset: var(--path-length); }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Fill fade for sparkline area */
+@keyframes fillIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Draw-in for sparklines */
+@keyframes drawIn {
+  from { stroke-dashoffset: var(--path-length); }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Fade-in for tooltip dot */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-draw-in {
+  animation: drawIn 800ms ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 200ms ease-out forwards;
+}
+
+/* Wave drift for header background */
+.wave-layer {
+  animation: waveDrift var(--wave-duration) linear infinite alternate;
+}
+
+/* Hero card sweep — use ::after so it sits below content, card has overflow:hidden */
+.hero-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(var(--color-premium) / 0.12), transparent);
+  transform: translateX(-100%) skewX(-15deg);
+  opacity: 0;
+  pointer-events: none;
+  animation: heroSweep var(--sweep-duration) ease-in-out infinite;
+  z-index: 0;
+}
+
+/* Pulse ring */
+.pulse-ring {
+  animation: pulseRing var(--pulse-duration) ease-out infinite;
+}
+
+/* Live dot */
+.live-dot {
+  animation: pulse var(--pulse-duration) ease-in-out infinite;
+}
+
+/* Slow pulse for overdue icon */
+.overdue-pulse {
+  animation: pulse 3s ease-in-out infinite;
+}
+
+/* Card hover */
+.card-hover {
+  transition: transform var(--duration-micro) ease-out, box-shadow var(--duration-micro) ease-out;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-float);
+}
+
+/* Stagger animation for cards */
+@keyframes staggerFadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stagger-card {
+  opacity: 0;
+  animation: staggerFadeUp 450ms ease-out forwards;
+}
+
+/* Hero card (Billed) — dark sidebar background, gold hairline border */
+.hero-billed {
+  background: rgb(var(--color-sidebar));
+  border-color: rgb(var(--color-premium) / 0.3);
+  color: rgb(var(--color-sidebar-ink));
+}
+.hero-billed .hero-billed-label {
+  color: rgb(var(--color-premium));
+}
+.hero-billed .hero-billed-value {
+  color: rgb(var(--color-sidebar-ink));
+}
+.hero-billed .hero-billed-sub {
+  color: rgb(var(--color-sidebar-muted));
+}
+.hero-billed .hero-billed-badge {
+  background: rgb(var(--color-premium) / 0.15);
+  border-color: rgb(var(--color-premium) / 0.3);
+  color: rgb(var(--color-premium));
+}
+.hero-billed .hero-collection-bar {
+  background: rgb(var(--color-sidebar-ink) / 0.08);
+  border-color: rgb(var(--color-premium) / 0.2);
+}
+.hero-billed .hero-collection-fill {
+  background: rgb(var(--color-premium));
+}
+.hero-billed .hero-sparkline {
+  stroke: rgb(var(--color-premium));
+}
+
+/* Wave drift for header background */
+.wave-layer {
+  animation: waveDrift var(--wave-duration) linear infinite alternate;
+}
+
+/* Hero card sweep — use ::after so it sits below content, card has overflow:hidden */
+.hero-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(var(--color-premium) / 0.12), transparent);
+  transform: translateX(-100%) skewX(-15deg);
+  opacity: 0;
+  pointer-events: none;
+  animation: heroSweep var(--sweep-duration) ease-in-out infinite;
+  z-index: 0;
+}
+
+/* Pulse ring */
+.pulse-ring {
+  animation: pulseRing var(--pulse-duration) ease-out infinite;
+}
+
+/* Live dot */
+.live-dot {
+  animation: pulse var(--pulse-duration) ease-in-out infinite;
+}
+
+/* Slow pulse for overdue icon */
+.overdue-pulse {
+  animation: pulse 3s ease-in-out infinite;
+}
+
+/* Sidebar active indicator slide */
+.sidebar-active-indicator {
+  transition: transform var(--duration-panel) ease-out;
+}
+
+/* Card hover */
+.card-hover {
+  transition: transform var(--duration-micro) ease-out, box-shadow var(--duration-micro) ease-out;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-float);
+}
+
+/* Stagger animation for cards */
+@keyframes staggerFadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stagger-card {
+  opacity: 0;
+  animation: staggerFadeUp 450ms ease-out forwards;
+}
+
+/* Pause animations when tab is hidden */
+@media (prefers-reduced-motion: reduce) {
+  .wave-layer,
+  .hero-sweep::after,
+  .pulse-ring,
+  .live-dot,
+  .overdue-pulse,
+  .stagger-card {
+    animation: none !important;
+  }
+}
+
+/* Pause when document is hidden */
+html[hidden] .wave-layer,
+html[hidden] .hero-sweep::after,
+html[hidden] .pulse-ring,
+html[hidden] .live-dot,
+html[hidden] .overdue-pulse,
+html[hidden] .stagger-card {
+  animation-play-state: paused;
 }
 
 /* Respect reduced-motion preferences globally. */
@@ -134,5 +417,226 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Stat Row & Cards - Overview Page */
+.stat-row {
+  display: grid;
+  grid-template-columns: 1.3fr repeat(4, 1fr);
+  gap: 16px;
+  align-items: stretch;
+  margin: 24px 0 32px;
+}
+
+@media (max-width: 1100px) {
+  .stat-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stat-row .stat--hero {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .stat-row {
+    grid-template-columns: 1fr;
+  }
+  .stat-row .stat--hero {
+    grid-column: auto;
+  }
+}
+
+.stat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 156px;
+  padding: 20px;
+  border-radius: 16px;
+  text-align: left;
+  background: rgb(var(--color-surface));
+  border: 1px solid rgb(var(--color-border));
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  transition: transform 160ms ease-out, box-shadow 160ms ease-out, border-color 160ms ease-out;
+  cursor: pointer;
+}
+
+.stat:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.06);
+}
+
+.stat:focus-visible {
+  outline: 2px solid rgb(var(--color-accent));
+  outline-offset: 2px;
+}
+
+.stat[aria-pressed="true"] {
+  border: 2px solid rgb(var(--color-success));
+}
+
+.stat--hero {
+  background: linear-gradient(145deg, rgb(19 35 29), rgb(18 41 31));
+  border-color: rgb(var(--color-premium) / 0.35);
+  color: rgb(var(--color-sidebar-ink));
+}
+
+.stat--hero .stat__label,
+.stat--hero .stat__value,
+.stat--hero .stat__sub {
+  color: inherit;
+}
+
+.stat--hero .stat__label {
+  color: rgb(var(--color-premium));
+}
+
+.stat--hero .stat__value {
+  color: rgb(var(--color-sidebar-ink));
+}
+
+.stat--hero .stat__sub {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.stat__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stat__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+}
+
+.stat__label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(var(--color-ink-muted));
+}
+
+.stat__value {
+  font-family: var(--font-display);
+  font-size: clamp(30px, 2.4vw, 38px);
+  line-height: 1.1;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+  font-variation-settings: "opsz" 72, "SOFT" 0, "WONK" 0;
+  color: rgb(var(--color-ink));
+  white-space: nowrap;
+}
+
+.stat__cur {
+  font-size: 0.7em;
+  font-weight: 400;
+  color: rgb(var(--color-premium));
+  vertical-align: 0.18em;
+  margin-right: 2px;
+}
+
+.stat__value-empty {
+  font-family: var(--font-display);
+  font-size: clamp(30px, 2.4vw, 38px);
+  line-height: 1.1;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+  font-variation-settings: "opsz" 72, "SOFT" 0, "WONK" 0;
+  color: rgb(var(--color-ink-muted));
+  white-space: nowrap;
+}
+
+.stat__sub {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 400;
+  color: rgb(var(--color-ink-muted));
+  white-space: nowrap;
+}
+
+.stat__spark {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 96px;
+  height: 32px;
+  pointer-events: none;
+}
+
+.stat__spark svg {
+  width: 100%;
+  height: 100%;
+}
+
+.stat__spark path {
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.stat__spark line {
+  stroke-width: 1.5;
+}
+
+.stat__sub {
+  color: rgb(var(--color-ink-muted));
+}
+
+.stat--overdue-active .stat__sub {
+  color: rgb(var(--color-overdue));
+  max-width: 90%;
+}
+
+.stat__selected-indicator {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  background: rgb(var(--color-success));
+  border-radius: 50%;
+  border: 2px solid rgb(var(--color-surface));
+}
+
+.stat[aria-pressed="true"] {
+  border: 2px solid rgb(var(--color-success));
+}
+
+.stat[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  background: rgb(var(--color-success));
+  border-radius: 50%;
+  border: 2px solid rgb(var(--color-surface));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat .hero-sweep::after,
+  .stat .pulse-ring,
+  .stat .stat__spark path {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .stat__spark path {
+    stroke-dashoffset: 0 !important;
   }
 }

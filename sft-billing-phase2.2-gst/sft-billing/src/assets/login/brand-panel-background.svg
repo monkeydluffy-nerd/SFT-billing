@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 662 900" width="662" height="900" role="img" aria-label="Dark green engineering-grid background">
+  <defs>
+    <linearGradient id="forest" gradientUnits="userSpaceOnUse" x1="148" y1="-54" x2="514" y2="954">
+      <stop offset="0" stop-color="#17372C"/>
+      <stop offset="1" stop-color="#0F2620"/>
+    </linearGradient>
+    <radialGradient id="glow" gradientUnits="userSpaceOnUse" cx="79" cy="900" r="520" gradientTransform="translate(79 900) scale(1 .6923) translate(-79 -900)">
+      <stop offset="0" stop-color="#B8935A" stop-opacity=".20"/>
+      <stop offset=".7" stop-color="#B8935A" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <g fill="#F7F4EE" fill-opacity=".04"><rect width="48" height="1"/><rect width="1" height="48"/></g>
+    </pattern>
+  </defs>
+  <rect width="662" height="900" fill="url(#forest)"/>
+  <rect width="662" height="900" fill="url(#glow)"/>
+  <rect width="662" height="900" fill="url(#grid)"/>
+</svg>

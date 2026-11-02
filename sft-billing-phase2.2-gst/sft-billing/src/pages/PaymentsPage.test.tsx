@@ -91,11 +91,14 @@ describe("PaymentsPage persisted proof state", () => {
 
     render(<PaymentsPage />);
 
-    expect(await screen.findByText("Proof: persisted-receipt.pdf")).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /Proof attached/ }));
+    expect(await screen.findByRole("dialog", { name: "Payment Details" })).toBeInTheDocument();
+    expect(screen.getByText("persisted-receipt.pdf")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete Payment unavailable" })).toBeDisabled();
     expect(screen.queryByText(persistedPayment.paymentProof!.attachmentReference)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Replace proof for payment pm_1" }));
-    expect(await screen.findByText("persisted-receipt.pdf")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Edit Payment" }));
+    expect(await screen.findByRole("button", { name: "Replace proof" })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Proof/), { target: { files: [file] } });
     fireEvent.click(screen.getByRole("button", { name: "Replace proof" }));
 

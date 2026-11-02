@@ -1,0 +1,189 @@
+import { useMemo } from "react";
+import {
+  FileText,
+  Send,
+  Eye,
+  AlertCircle,
+  IndianRupee,
+  UserPlus,
+  StickyNote,
+  BellRing,
+  CheckCircle2,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { ActivityEvent, ActivityEventType, Invoice } from "@/types";
+import { InvoiceNumberLink } from "@/components/shared/InvoiceNumberLink";
+import { cn } from "@/lib/cn";
+import { formatRelativeTime } from "@/lib/formatters";
+
+const ICONS: Record<ActivityEventType, LucideIcon> = {
+  invoice_created: FileText,
+  invoice_sent: Send,
+  invoice_viewed: Eye,
+  invoice_became_overdue: AlertCircle,
+  invoice_reminder_sent: BellRing,
+  invoice_marked_paid: CheckCircle2,
+  payment_received: IndianRupee,
+  client_added: UserPlus,
+  note_added: StickyNote,
+};
+
+const ICON_TILE_CLASSES: Record<ActivityEventType, string> = {
+  payment_received: "bg-success-bg text-success",
+  invoice_marked_paid: "bg-success-bg text-success",
+  invoice_reminder_sent: "bg-caution-bg text-caution",
+  invoice_became_overdue: "bg-overdue-bg text-overdue",
+  invoice_created: "bg-pending-bg text-pending",
+  invoice_sent: "bg-neutral-bg text-neutral",
+  invoice_viewed: "bg-neutral-bg text-neutral",
+  client_added: "bg-premium-bg text-premium",
+  note_added: "bg-neutral-bg text-neutral",
+};
+
+function formatRupees(value: number): string {
+  const formatted = new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value);
+  return formatted.replace("₹", "Rs");
+}
+
+function renderActivitySummary(event: ActivityEvent, invoice: Pick<Invoice, "id" | "number"> | undefined) {
+  if (!invoice) return event.summary;
+
+  const numberStart = event.summary.indexOf(invoice.number);
+  if (numberStart < 0) {
+    return (
+      <>
+        {event.summary} · <InvoiceNumberLink invoice={invoice} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      {event.summary.slice(0, numberStart)}
+      <InvoiceNumberLink invoice={invoice} />
+      {event.summary.slice(numberStart + invoice.number.length)}
+    </>
+  );
+}
+
+interface GroupedEvent {
+  event: ActivityEvent;
+  duplicateCount?: number;
+}
+
+function GroupedEvents({ group, events, invoices }: { group: string; events: GroupedEvent[]; invoices: Array<Pick<Invoice, "id" | "number">> }) {
+  return (
+    <div className="space-y-2">
+      <ul className="divide-y divide-border/50" role="list" aria-label={`Activity: ${group}`}>
+        {events.map((item, index) => {
+          const event = item.event;
+          const Icon = ICONS[event.type];
+          const invoice = event.invoiceId ? invoices.find((candidate) => candidate.id === event.invoiceId) : undefined;
+          const tileClass = ICON_TILE_CLASSES[event.type] || "bg-canvas text-ink-muted";
+
+          let summary = event.summary;
+          if (event.type === "payment_received" && invoice) {
+            const amount = (event as any).metadata?.amount;
+            if (amount) {
+              summary = `Payment of ${formatRupees(amount)} received for invoice ${invoice.number}`;
+            }
+          }
+
+          return (
+            <li
+              key={event.id}
+              className={cn(
+                "flex items-center gap-3 py-2.5 first:pt-1 last:pb-1",
+                "animate-slideDown"
+              )}
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <span
+                className={cn(
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border",
+                  tileClass
+                )}
+              >
+                <Icon size={13} strokeWidth={1.7} aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm leading-5 text-ink">{renderActivitySummary({ ...event, summary }, invoice)}</p>
+              </div>
+              <time className="shrink-0 flex items-center gap-1.5 text-xs text-ink-faint">
+                {formatRelativeTime(event.occurredAt)}
+                {item.duplicateCount && item.duplicateCount > 1 && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-medium text-ink-muted bg-canvas border border-border rounded">×{item.duplicateCount}</span>
+                )}
+              </time>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+interface EnhancedActivityFeedProps {
+  events: ActivityEvent[];
+  invoices?: Array<Pick<Invoice, "id" | "number">>;
+  limit?: number;
+}
+
+export function EnhancedActivityFeed({ events, invoices = [] }: EnhancedActivityFeedProps) {
+  const groupedEvents = useMemo(() => {
+    if (!events.length) return [];
+
+    const groups = new Map<string, { event: ActivityEvent; duplicateCount: number }[]>();
+
+    for (const event of events) {
+      const date = new Date(event.occurredAt);
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      let group: string;
+      if (date.toDateString() === today.toDateString()) group = "Today";
+      else if (date.toDateString() === yesterday.toDateString()) group = "Yesterday";
+      else group = "Earlier";
+
+      const mergeKey = `${event.type}-${event.invoiceId || "none"}`;
+      if (!groups.has(group)) groups.set(group, []);
+
+      const existing = groups.get(group)!.find((item) => `${item.event.type}-${item.event.invoiceId || "none"}` === mergeKey);
+      if (existing) {
+        existing.duplicateCount = (existing.duplicateCount || 1) + 1;
+      } else {
+        groups.get(group)!.push({ event, duplicateCount: 1 });
+      }
+    }
+
+    return Array.from(groups.entries());
+  }, [events]);
+
+  if (groupedEvents.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <FileText size={32} className="mx-auto text-ink-faint" aria-hidden />
+        <p className="mt-2 text-sm text-ink-muted">No activity yet</p>
+        <p className="text-xs text-ink-faint">Invoices, payments, and client updates will show up here as they happen.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6" role="region" aria-label="Recent activity">
+      {groupedEvents.map(([group, events]) => (
+        <GroupedEvents
+          key={group}
+          group={group}
+          events={events}
+          invoices={invoices}
+        />
+      ))}
+    </div>
+  );
+}

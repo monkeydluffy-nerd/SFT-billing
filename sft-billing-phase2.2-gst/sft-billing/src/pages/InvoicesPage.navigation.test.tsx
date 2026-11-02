@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { InvoicesPage } from "./InvoicesPage";
 import { activeDataProvider } from "@/services";
 import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
@@ -11,7 +11,6 @@ const client: Client = {
   contactName: "Accounts",
   email: "accounts@example.com",
   billingAddress: "1 Test Street",
-  clientSince: "2026-01-01",
 };
 
 const invoice: Invoice = {
@@ -45,6 +44,13 @@ afterEach(() => {
   resetNavigationState();
 });
 
+function waitForLoadingToFinish() {
+  return waitFor(() => {
+    expect(screen.queryByText(/Loading…/)).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId("skeleton")).toHaveLength(0);
+  }, { timeout: 5000 });
+}
+
 describe("Invoices invoice-number navigation", () => {
   it("opens the exact invoice detail id instead of a filtered invoice list", async () => {
     vi.spyOn(activeDataProvider, "getInvoices").mockResolvedValue([invoice]);
@@ -53,6 +59,7 @@ describe("Invoices invoice-number navigation", () => {
     useWorkspaceStore.setState({ currentPage: "invoices", selectedInvoiceId: "different-invoice" });
 
     render(<InvoicesPage />);
+    await waitForLoadingToFinish();
 
     fireEvent.click(await screen.findByRole("button", { name: "Open invoice INV-INVOICES-42" }));
 

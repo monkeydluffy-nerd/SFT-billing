@@ -2,30 +2,72 @@ import type { DataProvider } from "./dataProvider";
 import type {
   ActivityEvent,
   BusinessProfile,
+  CatalogProduct,
+  CatalogProductInput,
   Client,
   Invoice,
   InvoiceLineItem,
+  InventoryMovement,
+  InventoryMovementInput,
+  Notification,
   Payment,
   PaymentProof,
   PaymentProofError,
   PaymentProofUpload,
+  Product,
+  ProductStock,
   RecordPaymentResult,
 } from "@/types";
-import { mockProducts, mockReports, mockCurrentUser } from "@/data";
+import { mockReports, mockCurrentUser } from "@/data";
+import { initializeBackendConnection } from "./backendPort";
 
 /**
  * Real HTTP implementation of DataProvider, talking to the local FastAPI
- * + openpyxl backend (see backend/app) instead of an in-memory mock. This
- * is what makes data survive a reload/restart - every write here lands
- * on disk in backend/data/*.xlsx.
+ * backend instead of an in-memory mock. Migrated domains persist in SQLite;
+ * domains not yet migrated continue to use the legacy workbook.
  *
- * getProducts/getReports/getCurrentUser are NOT backed by the API yet
- * (the backend has no routes for them) - they intentionally fall back to
- * the existing mock data rather than hitting a nonexistent endpoint, so
- * they're honestly "not wired up yet" rather than silently broken.
+ * Products, invoices, payments, and clients use the local FastAPI backend;
+ * domains not yet migrated continue to use their existing mock data.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+// Lazily initialized API base URL
+let apiBaseUrlPromise: Promise<string> | null = null;
+let apiBaseUrl: string | null = null;
+
+/**
+ * Get the API base URL, initializing the backend connection if needed.
+ * This ensures the backend is ready before any API requests are made.
+ */
+async function getBaseUrl(): Promise<string> {
+  if (apiBaseUrl) {
+    return apiBaseUrl;
+  }
+
+  if (!apiBaseUrlPromise) {
+    // In test mode, use the environment variable directly without Tauri initialization
+    if (typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test') {
+      apiBaseUrlPromise = Promise.resolve(import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000");
+    } else {
+      // Initialize backend connection with health check
+      apiBaseUrlPromise = initializeBackendConnection().catch((error) => {
+        // If initialization fails, fall back to environment variable for development
+        // but log the error for debugging
+        console.error('[apiDataProvider] Backend initialization failed:', error);
+        if (
+          import.meta.env?.DEV === true &&
+          typeof import.meta !== 'undefined' &&
+          import.meta.env?.VITE_API_BASE_URL
+        ) {
+          return import.meta.env.VITE_API_BASE_URL;
+        }
+        throw error;
+      });
+    }
+  }
+
+  apiBaseUrl = await apiBaseUrlPromise;
+  return apiBaseUrl;
+}
 
 class ApiError extends Error {
   constructor(
@@ -43,6 +85,7 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const baseUrl = await getBaseUrl();
   let response: Response;
   const isMultipart = typeof FormData !== "undefined" && init?.body instanceof FormData;
   const headers = new Headers(init?.headers);
@@ -51,7 +94,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(`${baseUrl}${path}`, {
       ...init,
       headers,
     });
@@ -75,6 +118,57 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+async function requestInvoiceFile(
+  path: string,
+  expectedContentType: string,
+): Promise<{ blob: Blob; warnings: string[] }> {
+  const baseUrl = await getBaseUrl();
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}${path}`);
+  } catch {
+    throw new ApiError(0, "Could not reach the local billing service. Make sure it's running.");
+  }
+
+  if (!response.ok) {
+    let responseBody: unknown;
+    let detail = response.statusText;
+    try {
+      responseBody = await response.json();
+      const body = asRecord(responseBody);
+      const rawDetail = body?.detail;
+      detail = typeof rawDetail === "string"
+        ? rawDetail
+        : JSON.stringify(rawDetail ?? responseBody) ?? detail;
+    } catch {
+      // Keep the HTTP status text when the error response is not JSON.
+    }
+    throw new ApiError(response.status, detail, responseBody);
+  }
+
+  const contentType = response.headers.get("Content-Type") ?? "";
+  if (!contentType.includes(expectedContentType)) {
+    throw new ApiError(0, "Billing service returned an unexpected invoice export format.");
+  }
+
+  const rawWarnings = response.headers.get("X-Invoice-Export-Warnings");
+  let warnings: string[] = [];
+  if (rawWarnings) {
+    let parsedWarnings: unknown;
+    try {
+      parsedWarnings = JSON.parse(rawWarnings);
+    } catch {
+      throw new ApiError(0, "Billing service returned invalid invoice-export warnings.");
+    }
+    if (!Array.isArray(parsedWarnings) || !parsedWarnings.every((warning) => typeof warning === "string")) {
+      throw new ApiError(0, "Billing service returned invalid invoice-export warnings.");
+    }
+    warnings = parsedWarnings;
+  }
+
+  return { blob: await response.blob(), warnings };
 }
 
 // ---------------------------------------------------------------------------
@@ -291,10 +385,32 @@ export const apiDataProvider: DataProvider = {
   async updateClient(clientId, update) {
     return request<Client>(`/api/clients/${clientId}`, { method: "PUT", body: JSON.stringify(update) });
   },
+  async deleteClient(clientId) {
+    const result = await request<{ deleted: boolean; id: string }>(`/api/clients/${clientId}`, {
+      method: "DELETE",
+    });
+    if (!result.deleted || result.id !== clientId) {
+      throw new ApiError(0, "Billing service did not confirm client deletion.", result);
+    }
+  },
 
   async getInvoices() {
     const apiInvoices = await request<Record<string, unknown>[]>("/api/invoices");
     return apiInvoices.map(toFrontendInvoice);
+  },
+  async reserveInvoiceNumber(invoiceId) {
+    const result = await request<{ number: string }>("/api/invoices/reserve-number", {
+      method: "POST",
+      body: JSON.stringify({ invoiceId }),
+    });
+    return result.number;
+  },
+  async releaseReservation(invoiceId) {
+    const result = await request<{ released: boolean; invoiceId: string }>(
+      `/api/invoices/reserve-number/${encodeURIComponent(invoiceId)}`,
+      { method: "DELETE" }
+    );
+    return result;
   },
   async getInvoice(id) {
     try {
@@ -316,10 +432,85 @@ export const apiDataProvider: DataProvider = {
       : await request<Record<string, unknown>>("/api/invoices", { method: "POST", body: JSON.stringify(payload) });
     return toFrontendInvoice(apiInvoice);
   },
+  async deleteInvoice(invoiceId) {
+    const result = await request<{ deleted: boolean; id: string }>(
+      `/api/invoices/${encodeURIComponent(invoiceId)}`,
+      { method: "DELETE" },
+    );
+    if (!result.deleted || result.id !== invoiceId) {
+      throw new ApiError(0, "Billing service did not confirm invoice deletion.", result);
+    }
+  },
+  async getInvoiceExcel(id) {
+    return requestInvoiceFile(
+      `/api/invoices/${encodeURIComponent(id)}/excel`,
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+  },
+  async getInvoicePdf(id) {
+    return requestInvoiceFile(
+      `/api/invoices/${encodeURIComponent(id)}/pdf`,
+      "application/pdf",
+    );
+  },
 
-  // Not backed by the API yet - the backend has no /api/products route.
   async getProducts() {
-    return mockProducts;
+    const products = await request<CatalogProduct[]>("/api/products?active=true");
+    return products.map((product): Product => ({
+      id: product.id,
+      code: product.code,
+      name: product.name,
+      defaultUnitPrice: product.defaultUnitPrice,
+      unit: product.unit,
+      hsnCode: product.hsnCode,
+    }));
+  },
+  async getCatalogProducts() {
+    return request<CatalogProduct[]>("/api/products");
+  },
+  async createCatalogProduct(product: CatalogProductInput) {
+    return request<CatalogProduct>("/api/products", {
+      method: "POST",
+      body: JSON.stringify(product),
+    });
+  },
+  async updateCatalogProduct(productId: string, update: Partial<CatalogProductInput>) {
+    return request<CatalogProduct>(`/api/products/${encodeURIComponent(productId)}`, {
+      method: "PUT",
+      body: JSON.stringify(update),
+    });
+  },
+  async setCatalogProductActive(productId: string, isActive: boolean) {
+    return request<CatalogProduct>(
+      `/api/products/${encodeURIComponent(productId)}/status`,
+      { method: "PATCH", body: JSON.stringify({ isActive }) },
+    );
+  },
+  async setCatalogProductArchived(productId: string, isArchived: boolean) {
+    return request<CatalogProduct>(
+      `/api/products/${encodeURIComponent(productId)}/archive`,
+      { method: "PATCH", body: JSON.stringify({ isArchived }) },
+    );
+  },
+  async deleteCatalogProduct(productId: string) {
+    await request<void>(
+      `/api/products/${encodeURIComponent(productId)}`,
+      { method: "DELETE" },
+    );
+  },
+  async getProductStock(productId: string) {
+    return request<ProductStock>(`/api/products/${encodeURIComponent(productId)}/stock`);
+  },
+  async getInventoryMovements(productId: string) {
+    return request<InventoryMovement[]>(
+      `/api/products/${encodeURIComponent(productId)}/movements`,
+    );
+  },
+  async recordInventoryMovement(productId: string, movement: InventoryMovementInput) {
+    return request<InventoryMovement>(
+      `/api/products/${encodeURIComponent(productId)}/movements`,
+      { method: "POST", body: JSON.stringify(movement) },
+    );
   },
 
   async getPayments() {
@@ -356,6 +547,32 @@ export const apiDataProvider: DataProvider = {
   },
   async addActivityEvent(event) {
     return request<ActivityEvent>("/api/activities", { method: "POST", body: JSON.stringify(event) });
+  },
+
+  async getNotifications(limit?: number, unreadOnly?: boolean, category?: string) {
+    const params = new URLSearchParams();
+    if (limit) params.set("limit", String(limit));
+    if (unreadOnly) params.set("unread_only", "true");
+    if (category) params.set("category", category);
+    const query = params.toString() ? `?${params.toString()}` : "";
+    return request<Notification[]>(`/api/notifications${query}`);
+  },
+  async getUnreadCount(category?: string) {
+    const params = category ? `?category=${category}` : "";
+    return request<{ count: number; category?: string }>(`/api/notifications/unread-count${params}`);
+  },
+  async getNotificationCategories() {
+    return request<Record<string, string>>("/api/notifications/categories");
+  },
+  async getNotificationTypes() {
+    return request<Record<string, [string, string]>>("/api/notifications/types");
+  },
+  async markNotificationRead(notificationId: string) {
+    return request<Notification>(`/api/notifications/${notificationId}/read`, { method: "POST" });
+  },
+  async markAllNotificationsRead(category?: string) {
+    const body = category ? JSON.stringify({ category }) : "{}";
+    return request<{ count: number }>(`/api/notifications/read-all`, { method: "POST", body });
   },
 
   // Not backed by the API yet - the backend has no /api/reports route.

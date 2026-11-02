@@ -1,6 +1,11 @@
 import type { Client, Invoice, InvoiceStatus, Payment } from "@/types";
-import { computeInvoiceTotals, getInvoiceStatus } from "./invoiceMath";
+import { getInvoiceStatus } from "./invoiceMath";
 import { getClientName } from "./clientLookup";
+import {
+  getInvoiceOutstandingBalance,
+  getInvoicePaidAmount,
+  getInvoiceTotal,
+} from "./invoiceBalance";
 
 export type ReportId = "revenue" | "invoices" | "payments" | "outstanding" | "overdue" | "client-summary";
 
@@ -109,10 +114,12 @@ export function computeRevenueSummary(invoices: Invoice[], payments: Payment[], 
   let outstanding = 0;
   for (const invoice of invoices) {
     if (invoice.isDraft) continue;
-    const { total } = computeInvoiceTotals(invoice);
+    const total = getInvoiceTotal(invoice);
     billed += total;
     const status = getInvoiceStatus(invoice, asOf).status;
-    if (status === "pending" || status === "overdue") outstanding += total;
+    if (status === "pending" || status === "overdue") {
+      outstanding += getInvoiceOutstandingBalance(invoice, payments);
+    }
   }
   return { billed, collected: payments.reduce((sum, p) => sum + p.amount, 0), outstanding };
 }
@@ -126,7 +133,7 @@ export function computeInvoiceSummary(invoices: Invoice[], asOf: Date = new Date
   let totalAmount = 0;
   let overdueCount = 0;
   for (const invoice of invoices) {
-    totalAmount += computeInvoiceTotals(invoice).total;
+    totalAmount += getInvoiceTotal(invoice);
     if (getInvoiceStatus(invoice, asOf).status === "overdue") overdueCount += 1;
   }
   return { count: invoices.length, totalAmount, overdueCount };
@@ -154,9 +161,9 @@ export function computeOutstandingSummary(invoices: Invoice[], payments: Payment
   for (const invoice of invoices) {
     const status = getInvoiceStatus(invoice, asOf).status;
     if (status !== "pending" && status !== "overdue") continue;
-    const { total } = computeInvoiceTotals(invoice);
-    const paid = payments.filter((p) => p.invoiceId === invoice.id).reduce((sum, p) => sum + p.amount, 0);
-    totalOutstanding += Math.max(0, total - paid);
+    const outstanding = getInvoiceOutstandingBalance(invoice, payments);
+    if (outstanding <= 0) continue;
+    totalOutstanding += outstanding;
     invoiceCount += 1;
     clientIds.add(invoice.clientId);
   }
@@ -168,14 +175,16 @@ export interface OverdueSummary {
   invoiceCount: number;
   oldestDaysOverdue: number;
 }
-export function computeOverdueSummary(invoices: Invoice[], asOf: Date = new Date()): OverdueSummary {
+export function computeOverdueSummary(invoices: Invoice[], payments: Payment[], asOf: Date = new Date()): OverdueSummary {
   let totalOverdue = 0;
   let invoiceCount = 0;
   let oldestDaysOverdue = 0;
   for (const invoice of invoices) {
     const info = getInvoiceStatus(invoice, asOf);
     if (info.status !== "overdue") continue;
-    totalOverdue += computeInvoiceTotals(invoice).total;
+    const outstanding = getInvoiceOutstandingBalance(invoice, payments);
+    if (outstanding <= 0) continue;
+    totalOverdue += outstanding;
     invoiceCount += 1;
     oldestDaysOverdue = Math.max(oldestDaysOverdue, info.daysOverdue);
   }
@@ -215,7 +224,7 @@ export function buildInvoiceReportRows(invoices: Invoice[], clients: Client[], a
       clientName: getClientName(clients, invoice.clientId),
       issueDate: invoice.issueDate,
       dueDate: invoice.dueDate,
-      amount: computeInvoiceTotals(invoice).total,
+      amount: getInvoiceTotal(invoice),
       status: getInvoiceStatus(invoice, asOf).status,
     }))
     .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime());
@@ -266,15 +275,17 @@ export function buildOutstandingReportRows(
   for (const invoice of invoices) {
     const status = getInvoiceStatus(invoice, asOf).status;
     if (status !== "pending" && status !== "overdue") continue;
-    const { total } = computeInvoiceTotals(invoice);
-    const paid = payments.filter((p) => p.invoiceId === invoice.id).reduce((sum, p) => sum + p.amount, 0);
+    const total = getInvoiceTotal(invoice);
+    const paid = getInvoicePaidAmount(invoice, payments);
+    const outstanding = getInvoiceOutstandingBalance(invoice, payments);
+    if (outstanding <= 0) continue;
     rows.push({
       id: invoice.id,
       clientName: getClientName(clients, invoice.clientId),
       invoiceNumber: invoice.number,
       total,
       paid,
-      outstanding: Math.max(0, total - paid),
+      outstanding,
       dueDate: invoice.dueDate,
       status,
     });
@@ -300,11 +311,11 @@ export function buildClientSummaryRows(
   return clients
     .map((client) => {
       const clientInvoices = invoices.filter((i) => i.clientId === client.id && !i.isDraft);
-      const totalBilled = clientInvoices.reduce((sum, i) => sum + computeInvoiceTotals(i).total, 0);
+      const totalBilled = clientInvoices.reduce((sum, i) => sum + getInvoiceTotal(i), 0);
       const totalCollected = payments.filter((p) => p.clientId === client.id).reduce((sum, p) => sum + p.amount, 0);
       const outstanding = clientInvoices.reduce((sum, i) => {
         const status = getInvoiceStatus(i, asOf).status;
-        return status === "pending" || status === "overdue" ? sum + computeInvoiceTotals(i).total : sum;
+        return status === "pending" || status === "overdue" ? sum + getInvoiceOutstandingBalance(i, payments) : sum;
       }, 0);
       return {
         clientId: client.id,

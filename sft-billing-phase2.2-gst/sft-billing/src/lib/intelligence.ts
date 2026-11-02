@@ -14,8 +14,8 @@ import { getComparablePeriodWindow, sumInRange, countInRange, countDistinctInRan
  * system, and nothing here invents a fact. If there isn't enough data to
  * say something meaningful, the corresponding function returns
  * undefined/an empty array/a "not comparable" flag rather than a
- * fabricated insight - see IntelligencePage's empty states for how each
- * of those is communicated to the user.
+ * fabricated insight - see ReportsPage's Business Pulse and Attention Center
+ * for how each of those is communicated to the user.
  */
 
 /** Sums an invoice's grand total for invoices with paidAt within [start, end). */

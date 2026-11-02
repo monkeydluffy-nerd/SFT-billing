@@ -22,6 +22,36 @@ npm run build
 npm run preview
 ```
 
+## Excel invoice downloads
+
+The **Download Excel** action on a billed invoice asks the FastAPI backend to
+render the saved invoice, client, and business profile into the bundled Surfine
+template. Production builds always use the API provider; development builds can
+opt in with `VITE_USE_API=true`. The original template is not modified. Fields the template cannot
+represent are reported after download; exports with a nonzero discount, more
+than 19 item rows, more than 3 HSN/SAC groups, or more than 3 explicit client
+address lines are rejected rather than silently omitting invoice data.
+
+On Windows, the packaged backend uses
+`%LOCALAPPDATA%\SFT Billing\sft_billing.db`. On first launch only, it copies
+the bundled, approved client/product master-data seed to that path; invoices,
+payments, activities, and other business records are not included. An existing
+database is never replaced, and a missing seed or invalid/empty database causes
+startup to fail rather than silently creating an empty production database.
+The legacy workbook, its backups, and payment-proof files also use persistent
+per-user storage instead of PyInstaller's temporary extraction directory.
+Pending schema migrations create and integrity-check a timestamped copy under
+`%LOCALAPPDATA%\SFT Billing\backups` before applying changes. MSI install and
+uninstall operations affect the application directory, not the per-user
+database.
+
+**Download PDF** converts that same rendered workbook through Microsoft Excel
+on Windows; it does not create a second browser-rendered invoice. PDF download
+therefore requires Microsoft Excel installed on the machine running the backend.
+It exports the template's "original" invoice copy, preserving the workbook's
+cell layout, borders, colors, logo, and print settings.
+Invoice details and the invoice builder do not show a separate document preview.
+
 ## What's in Phase 1
 
 Per the phased build-out requested for this project, **Phase 1 delivers**:

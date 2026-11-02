@@ -6,3 +6,4 @@ export * from "./product";
 export * from "./user";
 export * from "./report";
 export * from "./business";
+export * from "./notification";

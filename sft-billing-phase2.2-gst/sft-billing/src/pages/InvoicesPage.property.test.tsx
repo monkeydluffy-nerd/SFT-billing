@@ -45,10 +45,17 @@ describe("Feature: core-business-system, Property 6: Removed actions never appea
 
         const { unmount, container } = render(<InvoicesPage />);
 
-        await waitFor(() => expect(container.querySelectorAll('button[aria-expanded]').length).toBe(invoices.length));
+        // Wait for invoice row expand buttons (client name + chevron per row)
+        await waitFor(() =>
+          expect(
+            container.querySelectorAll('button[aria-expanded][aria-label^="Expand invoice"], button[aria-expanded][aria-label^="Collapse invoice"]').length
+          ).toBe(invoices.length * 2),
+        );
 
         // Expand every row to reveal its action buttons.
-        const toggles = Array.from(container.querySelectorAll('button[aria-expanded]'));
+        const toggles = Array.from(
+          container.querySelectorAll('button[aria-expanded][aria-label^="Expand invoice"], button[aria-expanded][aria-label^="Collapse invoice"]')
+        );
         toggles.forEach((toggle) => fireEvent.click(toggle));
 
         await waitFor(() => {

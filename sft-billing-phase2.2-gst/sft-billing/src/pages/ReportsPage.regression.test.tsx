@@ -10,7 +10,6 @@ const reportClient: Client = {
   contactName: "Accounts A",
   email: "accounts-a@example.com",
   billingAddress: "1 Reports Street",
-  clientSince: "2026-01-01",
 };
 
 const secondReportClient: Client = {
@@ -19,7 +18,6 @@ const secondReportClient: Client = {
   contactName: "Accounts B",
   email: "accounts-b@example.com",
   billingAddress: "2 Reports Street",
-  clientSince: "2026-01-01",
 };
 
 function makeInvoice(overrides: Partial<Invoice> = {}): Invoice {
@@ -111,16 +109,14 @@ describe("Reports targeted terminology and filter regressions", () => {
     expect(spies.getClients).toHaveBeenCalled();
     expect(spies.getPayments).toHaveBeenCalled();
 
-    fireEvent.change(screen.getByRole("combobox", { name: "Filter by client" }), {
-      target: { value: secondReportClient.id },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Filter by client" }));
+    fireEvent.click(within(screen.getByRole("listbox", { name: "Filter by client" })).getByRole("option", { name: secondReportClient.name }));
     expect(screen.queryByRole("button", { name: "Open invoice INV-REPORTS-FILTER-A" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open invoice INV-REPORTS-FILTER-B-PENDING" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open invoice INV-REPORTS-FILTER-B-PAID" })).toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole("combobox", { name: "Filter by status" }), {
-      target: { value: "pending" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Filter by status" }));
+    fireEvent.click(within(screen.getByRole("listbox", { name: "Filter by status" })).getByRole("option", { name: "Outstanding" }));
     expect(screen.getByRole("button", { name: "Open invoice INV-REPORTS-FILTER-B-PENDING" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Open invoice INV-REPORTS-FILTER-B-PAID" })).not.toBeInTheDocument();
   });

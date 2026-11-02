@@ -1,18 +1,16 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { INVOICE_DOCUMENT_LABELS } from "@/components/create-invoice/invoiceDocumentModel";
 
 const SRC_ROOT = path.resolve(__dirname, "..");
 
 const AFFECTED_PRODUCTION_FILES = [
   "pages/CreateInvoicePage.tsx",
-  "components/create-invoice/InvoicePreview.tsx",
-  "components/create-invoice/InvoiceDocumentRenderer.tsx",
-  "components/create-invoice/invoiceDocumentModel.ts",
+  "pages/InvoicePage.tsx",
+  "components/create-invoice/DownloadInvoicePdfButton.tsx",
+  "services/invoiceTemplateDownloadService.ts",
   "components/payments/PaymentReceiptView.tsx",
   "pages/WorkspaceSettingsPage.tsx",
-  "services/invoiceExportService.ts",
 ] as const;
 
 function readSource(relativePath: string): string {
@@ -27,25 +25,22 @@ describe("production encoding", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("preserves the intended invoice document symbols and icon labels", () => {
+  it("preserves intended UI symbols and routes invoice downloads through the template", () => {
     const createInvoice = readSource("pages/CreateInvoicePage.tsx");
+    const invoicePage = readSource("pages/InvoicePage.tsx");
     const receipt = readSource("components/payments/PaymentReceiptView.tsx");
-    const exportService = readSource("services/invoiceExportService.ts");
+    const exportService = readSource("services/invoiceTemplateDownloadService.ts");
 
     expect(createInvoice).toContain("Preparing a blank invoice…");
     expect(createInvoice).toContain("· Net 15");
     expect(createInvoice).toContain("Round to nearest ₹");
     expect(createInvoice).toContain("ArrowLeft");
     expect(createInvoice).toContain("CheckCircle2");
+    expect(createInvoice).not.toContain("InvoicePreview");
+    expect(invoicePage).not.toContain("InvoiceDocumentRenderer");
     expect(receipt).toContain("Loading payment receipt…");
     expect(receipt).toContain("&apos;");
-    expect(exportService).toContain("const currencyFormat =");
-    expect(exportService).toContain("labels.currencySymbol");
-    expect(INVOICE_DOCUMENT_LABELS).toMatchObject({
-      separator: "·",
-      emptyValue: "—",
-      minus: "−",
-      currencySymbol: "₹",
-    });
+    expect(exportService).toContain('format === "excel"');
+    expect(exportService).toContain('format === "excel" ? "xlsx" : "pdf"');
   });
 });

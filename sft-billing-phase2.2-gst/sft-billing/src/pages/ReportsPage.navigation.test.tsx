@@ -11,7 +11,6 @@ const client: Client = {
   contactName: "Accounts",
   email: "accounts@example.com",
   billingAddress: "1 Test Street",
-  clientSince: "2026-01-01",
 };
 
 const invoice: Invoice = {
@@ -76,7 +75,8 @@ describe("Reports invoice navigation", () => {
     render(<ReportsPage />);
 
     fireEvent.click(await screen.findByRole("tab", { name: report }));
-    fireEvent.click(await screen.findByRole("button", { name: `Open invoice ${invoiceNumber}` }));
+    const buttons = await screen.findAllByRole("button", { name: `Open invoice ${invoiceNumber}` });
+    fireEvent.click(buttons[0]);
 
     const state = useWorkspaceStore.getState();
     expect(state.currentPage).toBe("invoice-detail");
