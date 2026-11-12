@@ -6,55 +6,50 @@ interface ReportSummaryProps {
 }
 
 /**
- * Generic layout shared by every report's summary strip - but each
- * report type builds its OWN set of items (see ReportsPage), so a
- * Payments report never shows "Overdue" and an Outstanding report never
- * shows "Payments received". Three items keeps the strip scannable
- * without repeating the same six metrics everywhere.
+ * Summary strip shared by every report. Each report builds its OWN items
+ * (see ReportsPage), so a Payments report never shows "Overdue" and an
+ * Outstanding report never shows "Payments received".
  */
 export function ReportSummary({ items }: ReportSummaryProps) {
   return (
-    <div className="grid grid-cols-1 gap-x-8 gap-y-5 border-y border-border py-6 sm:grid-cols-3">
+    <div
+      className="grid grid-cols-1 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface sm:divide-x sm:divide-y-0 sm:[grid-template-columns:repeat(var(--n),minmax(0,1fr))]"
+      style={{ "--n": items.length } as React.CSSProperties}
+    >
       {items.map((item) => (
-        <div key={item.label} className="flex flex-col items-center sm:items-start">
+        <div key={item.label} className="px-5 py-4">
           <p className="text-xs font-medium text-ink-muted">{item.label}</p>
-          <p className={cn("font-tabular mt-1.5 text-2xl text-ink", item.caution && "text-overdue")}>{item.value}</p>
+          <p className={cn("font-tabular mt-2 text-2xl font-medium tracking-tight text-ink", item.caution && "text-overdue")}>{item.value}</p>
         </div>
       ))}
     </div>
   );
 }
 
-/**
- * KPI card for displaying key metrics with consistent styling.
- */
+/** KPI card for displaying key metrics with consistent styling. */
 interface KPICardProps {
   label: string;
   value: string;
-  /** Optional trend indicator */
   trend?: {
-    value: number; // percentage change
-    label: string; // e.g., "vs last month"
-    positive?: boolean; // true = positive trend (green), false = negative (red)
+    value: number;
+    label: string;
+    positive?: boolean;
   };
-  /** Whether to highlight as caution (overdue, etc.) */
   caution?: boolean;
-  /** Optional icon */
   icon?: React.ReactNode;
 }
 
 export function KPICard({ label, value, trend, caution, icon }: KPICardProps) {
   return (
-    <div className="flex flex-col items-center sm:items-start p-4 bg-surface border border-border rounded-lg">
+    <div className="rounded-xl border border-border bg-surface p-5">
       {icon && <div className="mb-2 text-ink-muted">{icon}</div>}
-      <p className="text-xs font-medium text-ink-muted mb-1">{label}</p>
-      <p className={`font-tabular text-2xl font-medium ${caution ? "text-overdue" : "text-ink"}`}>
-        {value}
-      </p>
+      <p className="mb-1 text-xs font-medium text-ink-muted">{label}</p>
+      <p className={`font-tabular text-[1.7rem] font-medium tracking-tight ${caution ? "text-overdue" : "text-ink"}`}>{value}</p>
       {trend && (
         <div className="mt-1.5 flex items-center gap-1 text-xs font-medium">
           <span className={trend.positive ? "text-success" : "text-overdue"}>
-            {trend.value > 0 ? "+" : ""}{trend.value.toFixed(1)}%
+            {trend.value > 0 ? "+" : ""}
+            {trend.value.toFixed(1)}%
           </span>
           <span className="text-ink-muted">{trend.label}</span>
         </div>

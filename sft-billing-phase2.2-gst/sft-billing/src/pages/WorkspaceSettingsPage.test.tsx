@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useBusinessProfile } from "@/hooks/useBusinessProfile";
 import type { BusinessProfile } from "@/types";
@@ -41,9 +41,9 @@ describe("WorkspaceSettingsPage", () => {
     expect(screen.getByText("Preview from the saved business-profile logo URL.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Upload logo" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Preferences" }));
-
-    expect(screen.getByText("Appearance")).toBeInTheDocument();
+    // Settings is one scrolling page: every section is present without switching tabs.
+    expect(screen.getAllByText("Appearance").length).toBeGreaterThan(0);
+    expect(screen.getByText("Business profile", { selector: "p" })).toBeInTheDocument();
     expect(screen.queryByText("Regional formatting")).not.toBeInTheDocument();
     expect(screen.queryByText("Currency")).not.toBeInTheDocument();
   });

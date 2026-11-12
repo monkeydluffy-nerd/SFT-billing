@@ -254,7 +254,7 @@ export function ProductSalesInsights({
       </div>
 
       {/* Product Sales Table */}
-      <div className="overflow-hidden rounded-lg border border-border">
+      <div className="overflow-hidden rounded-xl border border-border bg-surface">
         <table className="w-full min-w-[840px] text-sm">
           <thead>
             <tr className="border-b border-border bg-surface">

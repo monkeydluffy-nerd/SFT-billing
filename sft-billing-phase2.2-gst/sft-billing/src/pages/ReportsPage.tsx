@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, FileBarChart, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Segmented, Stat, StatGroup } from "@/components/ui/kit";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { OverviewSkeleton } from "@/components/shared/SkeletonLoader";
 import { StatusChip } from "@/components/shared/StatusChip";
 import { InvoiceNumberLink } from "@/components/shared/InvoiceNumberLink";
 import { ReportTypeTabs } from "@/components/reports/ReportTypeTabs";
 import { ReportFilters, STATUS_OPTIONS } from "@/components/reports/ReportFilters";
-import { ReportSummary, KPICard } from "@/components/reports/ReportSummary";
+import { ReportSummary } from "@/components/reports/ReportSummary";
 import { CollectionOutlook } from "@/components/reports/CollectionOutlook";
 import { DataQualityChecks } from "@/components/reports/DataQualityChecks";
 import { ClientTrends } from "@/components/reports/ClientTrends";
@@ -73,6 +74,7 @@ export function ReportsPage() {
   const [recordOpen, setRecordOpen] = useState(false);
   const [replacementTarget, setReplacementTarget] = useState<Payment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [insightTab, setInsightTab] = useState<"pulse" | "attention" | "outlook" | "clients" | "products" | "quality">("pulse");
 
   const loading = invoicesLoading || !invoices || !clients || !payments;
 
@@ -213,7 +215,7 @@ export function ReportsPage() {
     return (
       <div>
         <PageHeader title="Reports" subtitle="A clear view of your billing and financial activity" />
-        <div className="px-10 py-10">
+        <div className="px-6 lg:px-8 py-10">
           <EmptyState icon={AlertTriangle} title="Couldn't load reports" description={error.message} />
         </div>
       </div>
@@ -224,188 +226,50 @@ export function ReportsPage() {
     <div>
       <PageHeader title="Reports" subtitle="A clear view of your billing and financial activity" />
 
-      <main className="mx-auto max-w-[1480px] px-5 py-8 sm:px-8 lg:px-12">
+      <main className="px-6 pb-12 lg:px-8">
         {loading ? (
           <OverviewSkeleton />
         ) : (
-          <div className="space-y-6">
-            <ReportTypeTabs active={reportId} onSelect={setReportId} />
-
-            {/* Filter toolbar — compact, responsive layout */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <ReportFilters filters={filters} onChange={setFilters} clients={clients} />
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <ExportBar onExportExcel={handleExportExcel} onExportCsv={handleExportCsv} onPrint={handlePrint} />
-              </div>
+          <div className="space-y-7">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <ReportTypeTabs active={reportId} onSelect={setReportId} />
+              <ExportBar onExportExcel={handleExportExcel} onExportCsv={handleExportCsv} onPrint={handlePrint} />
             </div>
 
-            {/* Result context — shows active date range and filter state */}
-            <div className="flex flex-wrap items-center gap-3 text-xs text-ink-muted px-4 py-3 rounded-lg bg-surface border border-border">
-              <span className="font-medium text-ink">Showing:</span>
-              <span>
-                {filters.preset !== "custom"
-                  ? DATE_PRESET_LABELS[filters.preset]
-                  : `${filters.from ? formatDate(filters.from) : "start"} to ${filters.to ? formatDate(filters.to) : "now"}`}
-              </span>
-              {filters.clientId && (
-                <>
-                  <span className="text-ink-muted">|</span>
-                  <span>
-                    Client: {clients?.find((c) => c.id === filters.clientId)?.name ?? filters.clientId}
-                  </span>
-                </>
-              )}
-              {filters.status && (
-                <>
-                  <span className="text-ink-muted">|</span>
-                  <span>
-                    Status: {STATUS_OPTIONS.find((s) => s.value === filters.status)?.label ?? filters.status}
-                  </span>
-                </>
-              )}
-              <span className="ml-auto text-ink-faint">
-                {filteredInvoices.length} invoice{filteredInvoices.length === 1 ? "" : "s"}
-              </span>
+            {/* Filters + what the results currently cover */}
+            <div className="space-y-3">
+              <ReportFilters filters={filters} onChange={setFilters} clients={clients} />
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
+                <span className="font-medium text-ink">Showing</span>
+                <span>
+                  {filters.preset !== "custom"
+                    ? DATE_PRESET_LABELS[filters.preset]
+                    : `${filters.from ? formatDate(filters.from) : "start"} to ${filters.to ? formatDate(filters.to) : "now"}`}
+                </span>
+                {filters.clientId && <span>· Client: {clients?.find((c) => c.id === filters.clientId)?.name ?? filters.clientId}</span>}
+                {filters.status && <span>· Status: {STATUS_OPTIONS.find((st) => st.value === filters.status)?.label ?? filters.status}</span>}
+                <span className="text-ink-faint">
+                  · {filteredInvoices.length} invoice{filteredInvoices.length === 1 ? "" : "s"}
+                </span>
+              </p>
             </div>
 
-            {/* KPI Cards for Revenue report — three aligned cards with visual hierarchy */}
-            {reportId === "revenue" && revenueSummary && (
-              <section className="space-y-4" aria-label="Revenue KPIs">
-                <p className="text-sm font-medium text-ink">Revenue Overview</p>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <KPICard
-                    label="Billed"
-                    value={formatCurrency(revenueSummary.billed)}
-                    caution={revenueSummary.outstanding > 0}
-                  />
-                  <KPICard
-                    label="Received"
-                    value={formatCurrency(revenueSummary.collected)}
-                  />
-                  <KPICard
-                    label="Outstanding"
-                    value={formatCurrency(revenueSummary.outstanding)}
-                    caution={revenueSummary.outstanding > 0}
-                  />
-                </div>
-              </section>
-            )}
-
-            {/* Business Pulse — workspace-wide snapshot (all time), shown for non-Revenue reports */}
-            {pulse && reportId !== "revenue" && (
-              <section className="space-y-4" aria-label="Business Pulse">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-ink">Business Pulse</p>
-                  <span className="text-xs text-ink-muted">Workspace-wide, all time</span>
-                </div>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-6 border-y border-border py-6 sm:grid-cols-3 lg:grid-cols-6">
-                  <PulseStat
-                    label="Billed"
-                    amount={pulse.billed.amount}
-                    timeframe={pulse.periodLabel}
-                    changePct={pulse.billed.comparable ? pulse.billed.changePct : undefined}
-                    changeLabel={pulse.billed.comparable ? `vs ${pulse.comparableLabel}` : undefined}
-                    comparisonUnavailable={pulse.hasComparableHistory && !pulse.billed.comparable}
-                  />
-                  <PulseStat
-                    label="Received"
-                    amount={pulse.collected.amount}
-                    timeframe={pulse.periodLabel}
-                    changePct={pulse.collected.comparable ? pulse.collected.changePct : undefined}
-                    changeLabel={pulse.collected.comparable ? `vs ${pulse.comparableLabel}` : undefined}
-                    comparisonUnavailable={pulse.hasComparableHistory && !pulse.collected.comparable}
-                  />
-                  <PulseStat
-                    label="Outstanding"
-                    amount={pulse.totalOutstanding}
-                    timeframe={`${pulse.outstandingInvoiceCount} invoice${pulse.outstandingInvoiceCount === 1 ? "" : "s"} outstanding or overdue`}
-                  />
-                  <PulseStat
-                    label="Overdue"
-                    amount={pulse.totalOverdue}
-                    tone="caution"
-                    timeframe={`${pulse.overdueInvoiceCount} invoice${pulse.overdueInvoiceCount === 1 ? "" : "s"} past due`}
-                  />
-                  <PulseStat
-                    label="Invoices issued"
-                    display={String(pulse.invoicesIssuedThisPeriod)}
-                    timeframe={pulse.periodLabel}
-                  />
-                  <PulseStat
-                    label="Clients billed"
-                    display={String(pulse.activeClientsThisPeriod)}
-                    timeframe={pulse.periodLabel}
-                  />
-                </div>
-              </section>
-            )}
-
-            {/* Attention Center — workspace-wide, shown for non-Revenue reports */}
-            {pulse && reportId !== "revenue" && (
-              <section className="space-y-4" aria-label="Attention Center">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-ink">Attention Center</p>
-                  <span className="text-xs text-ink-muted">Workspace-wide, all time</span>
-                </div>
-                {attentionItems.length === 0 ? (
-                  <EmptyState
-                    icon={Sparkles}
-                    title="Nothing needs attention"
-                    description="No invoices are overdue, unusually large, or due imminently, and payments are coming in normally. This list will surface anything that needs a decision as soon as it comes up."
-                  />
-                ) : (
-                  <AttentionList items={attentionItems} onOpenInvoice={navigateToInvoiceDetail} />
-                )}
-              </section>
-            )}
-
-            {/* Collection Outlook — shows unpaid invoices with due dates and outstanding amounts for the current filter scope */}
-            <CollectionOutlook
-              invoices={filteredInvoices}
-              payments={filteredPayments}
-              clients={clients ?? []}
-              asOf={now}
-            />
-
-            {/* Data Quality Checks — workspace-wide checks for data consistency issues */}
-            <DataQualityChecks
-              invoices={invoices ?? []}
-              payments={payments ?? []}
-              clients={clients ?? []}
-              asOf={now}
-              onNavigateToInvoice={navigateToInvoiceDetail}
-            />
-
-            {/* Client Trends — period-over-period client performance */}
-            <ClientTrends
-              invoices={invoices ?? []}
-              payments={payments ?? []}
-              clients={clients ?? []}
-              asOf={now}
-              currentStart={periodWindow.currentStart}
-              currentEnd={periodWindow.currentEnd}
-              comparableStart={periodWindow.comparableStart}
-              comparableEnd={periodWindow.comparableEnd}
-            />
-
-            {/* Product Sales Insights — period-over-period product performance */}
-            <ProductSalesInsights
-              invoices={invoices ?? []}
-              products={products ?? []}
-              currentStart={periodWindow.currentStart}
-              currentEnd={periodWindow.currentEnd}
-              comparableStart={periodWindow.comparableStart}
-              comparableEnd={periodWindow.comparableEnd}
-            />
-
-            <div className="flex items-center justify-between">
+            {/* Primary report: summary + table */}
+            <section className="space-y-4" aria-label={activeDefinition.title}>
               <div>
-                <p className="text-sm font-medium text-ink">{activeDefinition.title}</p>
+                <h2 className="text-sm font-semibold text-ink">{activeDefinition.title}</h2>
                 <p className="mt-0.5 text-xs text-ink-muted">{activeDefinition.description}</p>
               </div>
-            </div>
+
+              {reportId === "revenue" && revenueSummary && (
+                <div aria-label="Revenue KPIs">
+                  <StatGroup className="md:[--cols:3]">
+                    <Stat label="Billed" tone="accent" value={revenueSummary.billed} format={(n) => formatCurrency(n)} />
+                    <Stat label="Received" tone="success" value={revenueSummary.collected} format={(n) => formatCurrency(n)} delay={0.06} />
+                    <Stat label="Outstanding" tone={revenueSummary.outstanding > 0 ? "caution" : "neutral"} value={revenueSummary.outstanding} format={(n) => formatCurrency(n)} delay={0.12} />
+                  </StatGroup>
+                </div>
+              )}
 
             {reportId === "invoices" && (
               <ReportSummary
@@ -678,6 +542,163 @@ export function ReportsPage() {
                 />
               )
             )}
+            </section>
+
+            {/* Insights: workspace-wide analysis, one panel at a time */}
+            <section className="space-y-4" aria-label="Insights">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-ink">Insights</h2>
+                  <p className="mt-0.5 text-xs text-ink-muted">Workspace-wide analysis that goes beyond the filters above.</p>
+                </div>
+                <div className="max-w-full overflow-x-auto">
+                  <Segmented
+                    value={insightTab}
+                    onChange={setInsightTab}
+                    options={[
+                      { value: "pulse", label: "Business pulse" },
+                      { value: "attention", label: "Needs attention", count: attentionItems.length },
+                      { value: "outlook", label: "Collection outlook" },
+                      { value: "clients", label: "Client trends" },
+                      { value: "products", label: "Product sales" },
+                      { value: "quality", label: "Data quality" },
+                    ]}
+                  />
+                </div>
+              </div>
+
+              {insightTab === "pulse" && (
+                <>
+            {/* Business Pulse — workspace-wide snapshot (all time), shown for non-Revenue reports */}
+            {pulse && (
+              <section className="space-y-4" aria-label="Business Pulse">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-ink">Business pulse</p>
+                  <span className="text-xs text-ink-muted">Workspace-wide, all time</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-8 gap-y-6 rounded-xl border border-border bg-surface p-6 sm:grid-cols-3 lg:grid-cols-6">
+                  <PulseStat
+                    label="Billed"
+                    amount={pulse.billed.amount}
+                    timeframe={pulse.periodLabel}
+                    changePct={pulse.billed.comparable ? pulse.billed.changePct : undefined}
+                    changeLabel={pulse.billed.comparable ? `vs ${pulse.comparableLabel}` : undefined}
+                    comparisonUnavailable={pulse.hasComparableHistory && !pulse.billed.comparable}
+                  />
+                  <PulseStat
+                    label="Received"
+                    amount={pulse.collected.amount}
+                    timeframe={pulse.periodLabel}
+                    changePct={pulse.collected.comparable ? pulse.collected.changePct : undefined}
+                    changeLabel={pulse.collected.comparable ? `vs ${pulse.comparableLabel}` : undefined}
+                    comparisonUnavailable={pulse.hasComparableHistory && !pulse.collected.comparable}
+                  />
+                  <PulseStat
+                    label="Outstanding"
+                    amount={pulse.totalOutstanding}
+                    timeframe={`${pulse.outstandingInvoiceCount} invoice${pulse.outstandingInvoiceCount === 1 ? "" : "s"} outstanding or overdue`}
+                  />
+                  <PulseStat
+                    label="Overdue"
+                    amount={pulse.totalOverdue}
+                    tone="caution"
+                    timeframe={`${pulse.overdueInvoiceCount} invoice${pulse.overdueInvoiceCount === 1 ? "" : "s"} past due`}
+                  />
+                  <PulseStat
+                    label="Invoices issued"
+                    display={String(pulse.invoicesIssuedThisPeriod)}
+                    timeframe={pulse.periodLabel}
+                  />
+                  <PulseStat
+                    label="Clients billed"
+                    display={String(pulse.activeClientsThisPeriod)}
+                    timeframe={pulse.periodLabel}
+                  />
+                </div>
+              </section>
+            )}
+
+                </>
+              )}
+              {insightTab === "attention" && (
+                <>
+            {/* Attention Center — workspace-wide, shown for non-Revenue reports */}
+            {pulse && (
+              <section className="space-y-4" aria-label="Attention Center">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-ink">Attention center</p>
+                  <span className="text-xs text-ink-muted">Workspace-wide, all time</span>
+                </div>
+                {attentionItems.length === 0 ? (
+                  <EmptyState
+                    icon={Sparkles}
+                    title="Nothing needs attention"
+                    description="No invoices are overdue, unusually large, or due imminently, and payments are coming in normally. This list will surface anything that needs a decision as soon as it comes up."
+                  />
+                ) : (
+                  <AttentionList items={attentionItems} onOpenInvoice={navigateToInvoiceDetail} />
+                )}
+              </section>
+            )}
+
+                </>
+              )}
+              {insightTab === "outlook" && (
+                <>
+            {/* Collection Outlook — shows unpaid invoices with due dates and outstanding amounts for the current filter scope */}
+            <CollectionOutlook
+              invoices={filteredInvoices}
+              payments={filteredPayments}
+              clients={clients ?? []}
+              asOf={now}
+            />
+
+                </>
+              )}
+              {insightTab === "clients" && (
+                <>
+            {/* Client Trends — period-over-period client performance */}
+            <ClientTrends
+              invoices={invoices ?? []}
+              payments={payments ?? []}
+              clients={clients ?? []}
+              asOf={now}
+              currentStart={periodWindow.currentStart}
+              currentEnd={periodWindow.currentEnd}
+              comparableStart={periodWindow.comparableStart}
+              comparableEnd={periodWindow.comparableEnd}
+            />
+
+                </>
+              )}
+              {insightTab === "products" && (
+                <>
+            {/* Product Sales Insights — period-over-period product performance */}
+            <ProductSalesInsights
+              invoices={invoices ?? []}
+              products={products ?? []}
+              currentStart={periodWindow.currentStart}
+              currentEnd={periodWindow.currentEnd}
+              comparableStart={periodWindow.comparableStart}
+              comparableEnd={periodWindow.comparableEnd}
+            />
+
+                </>
+              )}
+              {insightTab === "quality" && (
+                <>
+            {/* Data Quality Checks — workspace-wide checks for data consistency issues */}
+            <DataQualityChecks
+              invoices={invoices ?? []}
+              payments={payments ?? []}
+              clients={clients ?? []}
+              asOf={now}
+              onNavigateToInvoice={navigateToInvoiceDetail}
+            />
+
+                </>
+              )}
+            </section>
           </div>
         )}
       </main>

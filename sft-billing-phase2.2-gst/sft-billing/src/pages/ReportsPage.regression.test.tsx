@@ -76,7 +76,7 @@ describe("Reports targeted terminology and filter regressions", () => {
     expect(within(paidRow as HTMLElement).getByText("Paid")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: "Revenue" }));
-    expect(await screen.findByText("Received")).toBeInTheDocument();
+    expect((await screen.findAllByText("Received")).length).toBeGreaterThan(0);
     expect(screen.queryByText("Collected")).not.toBeInTheDocument();
   });
 

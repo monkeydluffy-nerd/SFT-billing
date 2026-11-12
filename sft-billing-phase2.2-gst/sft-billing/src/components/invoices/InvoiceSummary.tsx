@@ -1,8 +1,7 @@
 import type { Client, Invoice, InvoiceLedgerStatusInfo, Payment } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { LedgerStatusChip } from "@/components/shared/LedgerStatusChip";
-import { StatusChip } from "@/components/shared/StatusChip";
 import { computeInvoiceTotals } from "@/lib/invoiceMath";
+import { NumberTicker } from "@/components/ui/kit";
 
 interface InvoiceSummaryProps {
   invoice: Invoice;
@@ -11,127 +10,55 @@ interface InvoiceSummaryProps {
   invoicePayments: Payment[];
 }
 
-export function InvoiceSummary({ invoice, client, ledgerInfo, invoicePayments }: InvoiceSummaryProps) {
-  const invoiceTotals = computeInvoiceTotals(invoice);
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-2.5 text-sm">
+      <dt className="text-ink-muted">{label}</dt>
+      <dd className="min-w-0 truncate text-right text-ink">{children}</dd>
+    </div>
+  );
+}
+
+/** One flat panel: amount + progress, then a divided details list. */
+export function InvoiceSummary({ invoice, client, invoicePayments }: InvoiceSummaryProps) {
+  const totals = computeInvoiceTotals(invoice);
   const paid = invoicePayments.reduce((sum, p) => sum + p.amount, 0);
-  const outstanding = Math.max(0, invoiceTotals.total - paid);
-
-  if (invoice.isDraft) {
-    return (
-      <section aria-label="Draft invoice details" className="space-y-6">
-        <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border p-5">
-          <div>
-            <StatusChip info={{ status: "draft", daysOverdue: 0, severity: null }} />
-          </div>
-          <div className="ml-auto text-right">
-            <p className="text-xs font-medium text-ink-muted">Invoice total</p>
-            <p className="font-tabular text-xl text-ink">{formatCurrency(invoiceTotals.total)}</p>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border border-border p-4">
-            <p className="text-xs font-medium text-ink-muted">Invoice number</p>
-            <p className="mt-1 font-mono text-sm text-ink">{invoice.number}</p>
-          </div>
-          <div className="rounded-lg border border-border p-4">
-            <p className="text-xs font-medium text-ink-muted">Issue date</p>
-            <p className="mt-1 text-sm text-ink">{formatDate(invoice.issueDate)}</p>
-          </div>
-          <div className="rounded-lg border border-border p-4">
-            <p className="text-xs font-medium text-ink-muted">Due date</p>
-            <p className="mt-1 text-sm text-ink">{formatDate(invoice.dueDate)}</p>
-          </div>
-          <div className="rounded-lg border border-border p-4">
-            <p className="text-xs font-medium text-ink-muted">Client</p>
-            <p className="mt-1 text-sm text-ink">{client?.name ?? "Unknown client"}</p>
-          </div>
-        </div>
-
-        {invoice.poNumber && (
-          <div className="rounded-lg border border-border p-4">
-            <p className="text-xs font-medium text-ink-muted">PO number</p>
-            <p className="mt-1 font-mono text-sm text-ink">{invoice.poNumber}</p>
-          </div>
-        )}
-      </section>
-    );
-  }
+  const outstanding = Math.max(0, totals.total - paid);
+  const progress = totals.total > 0 ? Math.min(100, (paid / totals.total) * 100) : 0;
 
   return (
-    <section aria-label="Invoice summary and details" className="space-y-6">
-      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border p-5">
-        <div>
-          {ledgerInfo && <LedgerStatusChip info={ledgerInfo} />}
-        </div>
-        <div className="ml-auto flex flex-col items-end gap-1">
-          <div className="flex items-center gap-4 text-sm">
-            <div className="text-right">
-              <p className="text-xs font-medium text-ink-muted">Invoice total</p>
-              <p className="font-tabular text-lg font-semibold text-ink">{formatCurrency(invoiceTotals.total)}</p>
+    <section aria-label={invoice.isDraft ? "Draft invoice details" : "Invoice summary and details"}>
+      <div>
+        <p className="text-xs font-medium text-ink-muted">{invoice.isDraft ? "Invoice total" : "Outstanding"}</p>
+        <p className="mt-1 text-[2rem] font-medium leading-none tracking-tight text-ink">
+          <NumberTicker value={invoice.isDraft ? totals.total : outstanding} format={(n) => formatCurrency(n)} />
+        </p>
+        {!invoice.isDraft && (
+          <>
+            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-border" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Collected">
+              <div className="h-full rounded-full bg-success transition-[width] duration-700 ease-out" style={{ width: `${progress}%` }} />
             </div>
-            {paid > 0 && (
-              <div className="text-right">
-                <p className="text-xs font-medium text-ink-muted">Received</p>
-                <p className="font-tabular text-lg font-semibold text-success">{formatCurrency(paid)}</p>
-              </div>
-            )}
-            <div className="text-right">
-              <p className="text-xs font-medium text-ink-muted">Outstanding</p>
-              <p className="font-tabular text-lg font-semibold text-ink">{formatCurrency(outstanding)}</p>
+            <div className="mt-2 flex justify-between text-xs text-ink-muted">
+              <span>
+                Received <span className="font-tabular text-ink">{formatCurrency(paid)}</span>
+              </span>
+              <span>
+                Invoice total <span className="font-tabular text-ink">{formatCurrency(totals.total)}</span>
+              </span>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg border border-border p-4">
-          <p className="text-xs font-medium text-ink-muted">Invoice number</p>
-          <p className="mt-1 font-mono text-sm text-ink">{invoice.number}</p>
-        </div>
-        <div className="rounded-lg border border-border p-4">
-          <p className="text-xs font-medium text-ink-muted">Issue date</p>
-          <p className="mt-1 text-sm text-ink">{formatDate(invoice.issueDate)}</p>
-        </div>
-        <div className="rounded-lg border border-border p-4">
-          <p className="text-xs font-medium text-ink-muted">Due date</p>
-          <p className="mt-1 text-sm text-ink">{formatDate(invoice.dueDate)}</p>
-        </div>
-        <div className="rounded-lg border border-border p-4">
-          <p className="text-xs font-medium text-ink-muted">Client</p>
-          <p className="mt-1 text-sm text-ink">{client?.name ?? "Unknown client"}</p>
-        </div>
-      </div>
-
-      {(invoice.poNumber || invoice.poDate || invoice.transporter) && (
-        <div className="grid gap-4 sm:grid-cols-3">
-          {invoice.poNumber && (
-            <div className="rounded-lg border border-border p-4">
-              <p className="text-xs font-medium text-ink-muted">PO number</p>
-              <p className="mt-1 font-mono text-sm text-ink">{invoice.poNumber}</p>
-            </div>
-          )}
-          {invoice.poDate && (
-            <div className="rounded-lg border border-border p-4">
-              <p className="text-xs font-medium text-ink-muted">PO date</p>
-              <p className="mt-1 text-sm text-ink">{formatDate(invoice.poDate)}</p>
-            </div>
-          )}
-          {invoice.transporter && (
-            <div className="rounded-lg border border-border p-4">
-              <p className="text-xs font-medium text-ink-muted">Transporter</p>
-              <p className="mt-1 text-sm text-ink">{invoice.transporter}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {invoice.notes && (
-        <div className="rounded-lg border border-border p-4">
-          <p className="text-xs font-medium text-ink-muted">Notes</p>
-          <p className="mt-1 text-sm text-ink whitespace-pre-wrap">{invoice.notes}</p>
-        </div>
-      )}
+      <dl className="mt-5 divide-y divide-border border-t border-border">
+        <Row label="Invoice number"><span className="font-mono text-[13px]">{invoice.number}</span></Row>
+        <Row label="Issue date">{formatDate(invoice.issueDate)}</Row>
+        <Row label="Due date">{formatDate(invoice.dueDate)}</Row>
+        <Row label="Client">{client?.name ?? "Unknown client"}</Row>
+        {invoice.poNumber && <Row label="PO number"><span className="font-mono text-[13px]">{invoice.poNumber}</span></Row>}
+        {invoice.supplierCode && <Row label="Supplier code">{invoice.supplierCode}</Row>}
+        {invoice.transporter && <Row label="Transporter">{invoice.transporter}</Row>}
+      </dl>
     </section>
   );
 }

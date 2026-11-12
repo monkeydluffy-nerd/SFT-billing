@@ -74,7 +74,7 @@ export function ClientCombobox({ clients, value, onSelect, onCreateClient, disab
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex h-11 w-full items-center gap-2.5 rounded-md border border-border bg-surface px-3 text-left text-sm transition-colors duration-micro",
+          "flex h-11 w-full items-center gap-2.5 rounded-lg border border-border-strong bg-surface px-3 text-left text-sm transition-colors duration-micro",
           "hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-60",
         )}
       >
@@ -86,7 +86,7 @@ export function ClientCombobox({ clients, value, onSelect, onCreateClient, disab
       </button>
 
       {open && (
-        <div className="absolute z-30 mt-1.5 w-full overflow-hidden rounded-md border border-border bg-surface-raised shadow-float">
+        <div className="absolute z-30 mt-1.5 w-full overflow-hidden rounded-lg border border-border-strong bg-surface-raised shadow-float">
           <div className="flex items-center gap-2 border-b border-border px-3">
             <Search size={13} className="text-ink-faint" aria-hidden />
             <input
@@ -138,18 +138,18 @@ export function ClientCombobox({ clients, value, onSelect, onCreateClient, disab
                   value={quickAdd.name}
                   onChange={(e) => setQuickAdd({ ...quickAdd, name: e.target.value })}
                   placeholder="Client or company name"
-                  className="h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint"
+                  className="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint"
                 />
                 <input
                   value={quickAdd.email}
                   onChange={(e) => setQuickAdd({ ...quickAdd, email: e.target.value })}
                   placeholder="Billing email"
-                  className="h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint"
+                  className="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint"
                 />
-                <input value={quickAdd.phone} onChange={(e) => setQuickAdd({ ...quickAdd, phone: e.target.value })} placeholder="Phone" className="h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint" />
-                <input value={quickAdd.billingAddress} onChange={(e) => setQuickAdd({ ...quickAdd, billingAddress: e.target.value })} placeholder="Billing address" className="h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint" />
-                <input value={quickAdd.gstin} onChange={(e) => setQuickAdd({ ...quickAdd, gstin: e.target.value })} placeholder="GSTIN" className="h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint" />
-                <input value={quickAdd.pan} onChange={(e) => setQuickAdd({ ...quickAdd, pan: e.target.value })} placeholder="PAN" className="h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint" />
+                <input value={quickAdd.phone} onChange={(e) => setQuickAdd({ ...quickAdd, phone: e.target.value })} placeholder="Phone" className="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint" />
+                <input value={quickAdd.billingAddress} onChange={(e) => setQuickAdd({ ...quickAdd, billingAddress: e.target.value })} placeholder="Billing address" className="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint" />
+                <input value={quickAdd.gstin} onChange={(e) => setQuickAdd({ ...quickAdd, gstin: e.target.value })} placeholder="GSTIN" className="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint" />
+                <input value={quickAdd.pan} onChange={(e) => setQuickAdd({ ...quickAdd, pan: e.target.value })} placeholder="PAN" className="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint" />
                 <div className="flex justify-end gap-2 pt-1">
                   <button
                     type="button"
@@ -162,7 +162,7 @@ export function ClientCombobox({ clients, value, onSelect, onCreateClient, disab
                     type="button"
                     disabled={!quickAdd.name.trim() || !quickAdd.billingAddress.trim() || !quickAdd.gstin.trim() || creating}
                     onClick={submitQuickAdd}
-                    className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink disabled:opacity-50"
+                    className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink disabled:opacity-50"
                   >
                     {creating ? "Adding…" : "Add client"}
                   </button>

@@ -203,9 +203,12 @@ def validate_session(db: Session, token: str) -> Optional[User]:
     if not session:
         return None
 
-    # Update last used timestamp
+    # Update last used timestamp. Commit immediately: leaving this write open
+    # until the request finishes holds SQLite's write lock for the whole
+    # request, so the handler's own writes (separate connection) would block
+    # on it and fail with "database is locked".
     session.last_used_at = _now_iso()
-    db.flush()
+    db.commit()
 
     user = db.get(User, session.user_id)
     return user

@@ -169,7 +169,7 @@ export function AuraPanel() {
                   e.preventDefault();
                   send(input);
                 }}
-                className="flex items-center gap-2 rounded-md border border-border bg-canvas px-3"
+                className="flex items-center gap-2 rounded-lg border border-border bg-canvas px-3"
               >
                 <input
                   value={input}
@@ -181,7 +181,7 @@ export function AuraPanel() {
                 <button
                   type="submit"
                   disabled={!input.trim()}
-                  className="flex h-7 w-7 items-center justify-center rounded-md bg-accent text-accent-ink transition-opacity duration-micro disabled:opacity-30"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-accent-ink transition-opacity duration-micro disabled:opacity-30"
                   aria-label="Send"
                 >
                   <ArrowUp size={14} />

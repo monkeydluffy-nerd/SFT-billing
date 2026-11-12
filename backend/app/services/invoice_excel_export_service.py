@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import os
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -471,9 +472,29 @@ def render_invoice_pdf(
     business: dict[str, Any],
     template_path: Path = TEMPLATE_PATH,
 ) -> bytes:
-    """Export the original invoice copy from the rendered Excel template."""
+    """Render the invoice PDF.
+
+    Default engine ("template"): the filled Excel invoice sheet is drawn cell
+    for cell, so the PDF is the exact Excel format and needs no Office or
+    printer. Other engines via SFT_PDF_ENGINE: "excel" (Microsoft Excel COM,
+    needs a working default printer) and "native" (a separate ReportLab layout).
+    """
+    engine = _pdf_engine()
+    if engine == "excel":
+        workbook_content = render_invoice_excel(invoice, client, business, template_path)
+        return _convert_excel_template_to_pdf(workbook_content)
+    if engine == "native":
+        from app.services.invoice_pdf_service import render_invoice_pdf_native
+
+        return render_invoice_pdf_native(invoice, client, business)
+    from app.services.xlsx_pdf_renderer import render_sheet_pdf
+
     workbook_content = render_invoice_excel(invoice, client, business, template_path)
-    return _convert_excel_template_to_pdf(workbook_content)
+    return render_sheet_pdf(workbook_content, "original")
+
+
+def _pdf_engine() -> str:
+    return os.environ.get("SFT_PDF_ENGINE", "template").strip().lower()
 
 
 def _convert_excel_template_to_pdf(workbook_content: bytes) -> bytes:
@@ -564,5 +585,5 @@ def export_invoice_pdf(invoice_id: str) -> InvoiceExcelExport:
     return InvoiceExcelExport(
         content=content,
         file_name=f"{Path(_safe_file_name(str(invoice['number']))).stem}.pdf",
-        warnings=UNSUPPORTED_FIELDS,
+        warnings=[] if _pdf_engine() == "native" else UNSUPPORTED_FIELDS,
     )

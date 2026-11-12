@@ -29,7 +29,7 @@ export function Toast({ message, onDismiss, duration = 3200 }: ToastProps) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 8 }}
           transition={{ duration: 0.18 }}
-          className="fixed bottom-6 left-6 z-50 flex items-center gap-2 rounded-md border border-border bg-surface-raised px-4 py-2.5 text-sm text-ink shadow-float"
+          className="fixed bottom-6 left-6 z-50 flex items-center gap-2 rounded-lg border border-border-strong bg-surface-raised px-4 py-2.5 text-sm text-ink shadow-float"
           role="status"
         >
           <CheckCircle2 size={15} className="shrink-0 text-success" aria-hidden />

@@ -3,18 +3,13 @@ import {
   AlertTriangle,
   CalendarDays,
   ChevronDown,
-  Plus,
+  ChevronRight,
   RotateCcw,
-  Search,
-  Users,
-  Leaf,
-  ArrowRight,
-  Clock,
 } from "lucide-react";
-import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { WorkspaceDropdown } from "@/components/notifications/WorkspaceDropdown";
-import { StatCard } from "@/components/overview/StatCard";
 import { RevenueChart } from "@/components/overview/RevenueChart";
+import { BlurFade, NumberTicker } from "@/components/ui/kit";
+import { AttentionList, Card, CardHeader, CollectionRing, KpiCard, TopClients, TrendPill, type AttentionItem, type ClientBar } from "@/components/overview/Bento";
+import { formatCurrency } from "@/lib/formatters";
 import { EnhancedActivityFeed } from "@/components/overview/EnhancedActivityFeed";
 import { FocusedInvoiceList } from "@/components/overview/FocusedInvoiceList";
 import { OverviewSkeleton } from "@/components/shared/SkeletonLoader";
@@ -25,8 +20,8 @@ import { useInvoices } from "@/hooks/useInvoices";
 import { useClients } from "@/hooks/useClients";
 import { useActivity } from "@/hooks/useActivity";
 import { usePayments } from "@/hooks/usePayments";
-import { useBusinessProfile } from "@/hooks/useBusinessProfile";
 import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
+import { useAuthStore } from "@/hooks/useAuthStore";
 import {
   computeLedgerStatusTotals,
   computeMonthlyPaymentRevenueSeries,
@@ -42,50 +37,7 @@ import {
   isDateWithinRange,
   type ReportFilterState,
 } from "@/lib/reports";
-import { getInvoiceWorkflowStatus } from "@/lib/invoiceMath";
-import { cn } from "@/lib/cn";
-
-interface OverviewTopBarProps {
-  businessName: string;
-  monogram: string;
-  onSearch: () => void;
-}
-
-function OverviewTopBar({ businessName, monogram, onSearch }: OverviewTopBarProps) {
-  const animationsEnabled = true;
-
-  return (
-    <div className="print:hidden flex flex-wrap items-center justify-between gap-4 border-b border-border bg-header px-5 py-4 sm:px-8 lg:px-12">
-      <button
-        type="button"
-        onClick={onSearch}
-        className="group flex min-w-0 flex-1 items-center gap-3 rounded-md border border-border bg-surface/60 px-3.5 py-2.5 text-left text-sm text-ink-muted transition-colors duration-micro hover:border-border-strong hover:bg-surface hover:text-ink sm:max-w-xl"
-      >
-        <Search size={15} strokeWidth={1.7} aria-hidden />
-        <span className="min-w-0 flex-1 truncate">Search invoices, clients, or anything...</span>
-        <kbd className="hidden shrink-0 rounded border border-border bg-canvas px-1.5 py-0.5 font-sans text-[11px] text-ink-faint sm:inline-block">
-          Ctrl K
-        </kbd>
-      </button>
-
-      <div className="ml-auto flex items-center gap-4">
-        <NotificationBell />
-        <WorkspaceDropdown businessName={businessName} monogram={monogram} />
-      </div>
-
-      {/* Gold wave background layer */}
-      <div
-        className={cn("wave-layer pointer-events-none absolute right-0 top-0 hidden h-64 w-[42%] overflow-hidden lg:block", !animationsEnabled && "animate-none")}
-        aria-hidden="true"
-      >
-        <svg viewBox="0 0 520 220" className="h-full w-full" fill="none" preserveAspectRatio="none">
-          <path d="M-20 174C96 44 184 236 322 112 394 47 430 56 548 8" stroke="rgb(var(--color-premium) / 0.14)" strokeWidth="1.25" />
-          <path d="M104 244C212 135 289 236 389 137 437 90 475 88 558 56" stroke="rgb(var(--color-premium) / 0.08)" strokeWidth="1" />
-        </svg>
-      </div>
-    </div>
-  );
-}
+import { computeInvoiceTotals, getInvoiceWorkflowStatus } from "@/lib/invoiceMath";
 
 function periodDateLabel(value: string): string {
   return new Date(`${value}T00:00:00`).toLocaleDateString("en-IN", {
@@ -144,7 +96,7 @@ function OverviewPeriodControl({ filters, now, onChange }: OverviewPeriodControl
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={`Open reporting period controls for ${periodLabel}`}
-        className="flex items-center gap-3 rounded-md border border-border bg-surface/75 px-4 py-3 text-left shadow-card"
+        className="flex items-center gap-3 rounded-lg border border-border-strong bg-surface/75 px-4 py-3 text-left shadow-card"
       >
         <CalendarDays size={17} strokeWidth={1.6} className="text-premium" aria-hidden />
         <span>
@@ -157,7 +109,7 @@ function OverviewPeriodControl({ filters, now, onChange }: OverviewPeriodControl
         <div
           role="dialog"
           aria-label="Select reporting period"
-          className="absolute right-0 top-full z-30 mt-2 w-[min(92vw,620px)] rounded-md border border-border bg-surface-raised p-3 shadow-float"
+          className="absolute right-0 top-full z-30 mt-2 w-[min(92vw,620px)] rounded-lg border border-border-strong bg-surface-raised p-3 shadow-float"
         >
           <ReportFilters filters={filters} onChange={(next) => { handleChange(next); if (next.preset !== "custom") setOpen(false); }} clients={[]} asOf={now} />
         </div>
@@ -166,14 +118,25 @@ function OverviewPeriodControl({ filters, now, onChange }: OverviewPeriodControl
   );
 }
 
+function greetingFor(now: Date): string {
+  const hour = now.getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 function OverviewIntro({ periodFilters, now, onPeriodChange }: { periodFilters: ReportFilterState; now: Date; onPeriodChange: (next: ReportFilterState) => void }) {
+  const username = useAuthStore((state) => state.user?.username);
+  const today = now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   return (
-    <section className="relative flex flex-col justify-between gap-7 border-b border-border pb-9 lg:flex-row lg:items-end">
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-premium">GOOD MORNING</p>
-        <h1 className="mt-3 max-w-3xl font-display text-hero text-ink sm:text-hero-lg">Here&apos;s your business at a glance.</h1>
-        <p className="mt-4 max-w-xl text-base text-ink-muted">
-          Track revenue, manage invoices, and keep your business moving forward.
+    <section className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">{today}</p>
+        <h1 className="mt-1.5 font-display text-2xl text-ink sm:text-[1.9rem]">
+          {greetingFor(now)}{username ? `, ${username}` : ""}
+        </h1>
+        <p className="mt-1.5 max-w-xl text-sm text-ink-muted">
+          Here&apos;s how your business is doing — revenue, receivables and what needs attention.
         </p>
       </div>
       <OverviewPeriodControl filters={periodFilters} now={now} onChange={onPeriodChange} />
@@ -186,12 +149,12 @@ export function OverviewPage() {
   const { data: clients } = useClients();
   const { data: activity } = useActivity();
   const { data: payments, loading: paymentsLoading } = usePayments();
-  const { data: businessProfile } = useBusinessProfile();
   const {
     overviewFocus,
     focusOverviewStatus,
     navigateTo,
-    openCommandPalette,
+    navigateToInvoiceDetail,
+    navigateToClientDetail,
   } = useWorkspaceStore();
 
   const now = useMemo(() => new Date(), []);
@@ -203,14 +166,6 @@ export function OverviewPage() {
   }));
   const [isSlowLoad] = useState(false);
   const periodLabel = useMemo(() => getOverviewPeriodLabel(periodFilters, now), [periodFilters, now]);
-  const businessName = businessProfile?.name ?? "SFT Billing";
-  const monogram = businessName
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((word) => word[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 
   const periodInvoices = useMemo(
     () => (invoices ? filterInvoices(invoices, periodFilters, now) : []),
@@ -271,6 +226,39 @@ export function OverviewPage() {
     return maxDays;
   }, [allInvoices, payments, now]);
 
+  // Overdue invoices, oldest first, with what is still owed.
+  const attentionItems = useMemo<AttentionItem[]>(() => {
+    if (!payments) return [];
+    const paidByInvoice = new Map<string, number>();
+    for (const payment of payments) paidByInvoice.set(payment.invoiceId, (paidByInvoice.get(payment.invoiceId) ?? 0) + payment.amount);
+    return allInvoices
+      .map((invoice) => ({ invoice, info: getInvoiceWorkflowStatus(invoice, payments, now) }))
+      .filter(({ info }) => info.status === "overdue")
+      .sort((a, b) => b.info.daysOverdue - a.info.daysOverdue)
+      .map(({ invoice, info }) => ({
+        id: invoice.id,
+        number: invoice.number,
+        client: clients?.find((client) => client.id === invoice.clientId)?.name ?? "Unknown client",
+        balance: Math.max(0, computeInvoiceTotals(invoice).total - (paidByInvoice.get(invoice.id) ?? 0)),
+        daysOverdue: info.daysOverdue,
+      }))
+      .filter((item) => item.balance > 0.005)
+      .slice(0, 5);
+  }, [allInvoices, payments, clients, now]);
+
+  // Clients ranked by amount billed in the selected period.
+  const topClients = useMemo<ClientBar[]>(() => {
+    const totals = new Map<string, number>();
+    for (const invoice of periodInvoices) {
+      if (invoice.isDraft) continue;
+      totals.set(invoice.clientId, (totals.get(invoice.clientId) ?? 0) + computeInvoiceTotals(invoice).total);
+    }
+    return [...totals.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id, total]) => ({ id, total, name: clients?.find((client) => client.id === id)?.name ?? "Unknown client" }));
+  }, [periodInvoices, clients]);
+
   // Use direct values without count-up animation for static look
   const billedValue = periodBilled;
   const receivedValue = periodReceived;
@@ -280,11 +268,6 @@ export function OverviewPage() {
   if (invoicesError) {
     return (
       <div className="min-h-full bg-canvas">
-        <OverviewTopBar
-          businessName={businessName}
-          monogram={monogram}
-          onSearch={openCommandPalette}
-        />
         <main className="mx-auto max-w-[1480px] px-5 py-8 sm:px-8 lg:px-12">
           <OverviewIntro periodFilters={periodFilters} now={now} onPeriodChange={setPeriodFilters} />
           <div className="pt-8">
@@ -310,14 +293,9 @@ export function OverviewPage() {
 
   return (
     <div className="min-h-full bg-canvas pb-[96px]">
-      <OverviewTopBar
-        businessName={businessName}
-        monogram={monogram}
-        onSearch={openCommandPalette}
-      />
 
       <main className="relative isolate overflow-hidden">
-        <div className="relative mx-auto max-w-[1480px] px-5 pb-12 pt-8 sm:px-8 lg:px-12">
+        <div className="relative mx-auto max-w-[1480px] px-5 pb-12 pt-6 sm:px-8 lg:px-6 lg:px-8">
           <OverviewIntro periodFilters={periodFilters} now={now} onPeriodChange={setPeriodFilters} />
 
           <ErrorBoundary
@@ -341,7 +319,7 @@ export function OverviewPage() {
                     <button
                       type="button"
                       onClick={() => window.location.reload()}
-                      className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors duration-micro hover:bg-accent/90"
+                      className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors duration-micro hover:bg-accent/90"
                     >
                       <RotateCcw size={14} strokeWidth={1.8} aria-hidden />
                       Retry
@@ -350,125 +328,96 @@ export function OverviewPage() {
                 )}
               </div>
             ) : (
-              <div className="space-y-9 pt-9">
-                {/* Financial Summary Section - responsive grid */}
-                <section
-                  className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-5 items-stretch"
-                  aria-label="Financial summary"
-                  style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" }}
-                >
-                  {/* Hero Card - Billed */}
-                  <StatCard
-                    isHero
-                    label="TOTAL REVENUE"
-                    value={billedValue}
-                    changePct={changePct}
-                    comparable={comparable}
-                    periodLabel={periodLabel}
-                    onClick={() => navigateTo("reports")}
-                  />
+              <div className="space-y-5 pt-6">
+                {/* Row 1: revenue hero + collection ring */}
+                <BlurFade>
+                  <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                    <Card className="p-6">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                          <p className="text-xs font-medium text-ink-muted">Total revenue · {periodLabel}</p>
+                          <p className="mt-2 text-[2.6rem] font-semibold leading-none tracking-tight text-ink">
+                            <NumberTicker value={billedValue} format={(n) => formatCurrency(n)} duration={1.4} />
+                          </p>
+                          <div className="mt-3 flex items-center gap-2">
+                            {comparable && changePct !== 0 ? <TrendPill pct={changePct} /> : null}
+                            <span className="text-xs text-ink-muted">
+                              {comparable && changePct !== 0 ? "vs previous period" : "No earlier period to compare"}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigateTo("reports")}
+                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-border-strong px-3 text-xs font-medium text-ink transition-colors hover:border-accent hover:text-accent"
+                        >
+                          Open reports <ChevronRight size={13} aria-hidden />
+                        </button>
+                      </div>
+                      <div className="mt-6">
+                        <RevenueChart series={revenueSeries} />
+                      </div>
+                    </Card>
 
-                  {/* Status Strip Cards */}
-                  <StatCard
-                    label="OUTSTANDING"
-                    value={outstandingValue}
-                    subLine={pendingSubLine}
-                    isSelected={overviewFocus === "pending"}
-                    onClick={() => focusOverviewStatus("pending")}
-                  />
-                  <StatCard
-                    label="RECEIVED"
-                    value={receivedValue}
-                    subLine={paidSubLine}
-                    isSelected={overviewFocus === "paid"}
-                    onClick={() => focusOverviewStatus("paid")}
-                  />
-                  <StatCard
-                    label="OVERDUE"
-                    value={overdueValue}
-                    subLine={overdueSubLine}
-                    isSelected={overviewFocus === "overdue"}
-                    onClick={() => focusOverviewStatus("overdue")}
-                  />
-                  <StatCard
-                    label="DRAFT"
-                    value={allTotals?.draft.amount ?? 0}
-                    subLine={draftSubLine}
-                    isSelected={overviewFocus === "draft"}
-                    onClick={() => focusOverviewStatus("draft")}
-                  />
-                </section>
+                    <Card className="flex flex-col p-6">
+                      <CardHeader title="Collection" description={`Of ${formatCurrency(periodBilled)} billed`} />
+                      <div className="flex flex-1 items-center justify-center py-5">
+                        <CollectionRing pct={periodBilled > 0 ? (periodReceived / periodBilled) * 100 : 0} />
+                      </div>
+                      <dl className="divide-y divide-border text-sm">
+                        <div className="flex items-center justify-between py-2.5">
+                          <dt className="flex items-center gap-2 text-ink-muted"><span className="h-2 w-2 rounded-full bg-accent" />Billed</dt>
+                          <dd className="font-tabular font-medium text-ink">{formatCurrency(periodBilled)}</dd>
+                        </div>
+                        <div className="flex items-center justify-between py-2.5">
+                          <dt className="flex items-center gap-2 text-ink-muted"><span className="h-2 w-2 rounded-full bg-success" />Received</dt>
+                          <dd className="font-tabular font-medium text-ink">{formatCurrency(periodReceived)}</dd>
+                        </div>
+                        <div className="flex items-center justify-between py-2.5">
+                          <dt className="flex items-center gap-2 text-ink-muted"><span className="h-2 w-2 rounded-full bg-pending" />Still to collect</dt>
+                          <dd className="font-tabular font-medium text-ink">{formatCurrency(Math.max(0, periodBilled - periodReceived))}</dd>
+                        </div>
+                      </dl>
+                    </Card>
+                  </div>
+                </BlurFade>
 
-                {/* Focused Invoice List - shown when a status card is clicked */}
+                {/* Row 2: status KPIs */}
+                <BlurFade delay={0.08}>
+                  <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
+                    <KpiCard label="Outstanding" tone="pending" value={outstandingValue} sub={pendingSubLine} active={overviewFocus === "pending"} onClick={() => focusOverviewStatus("pending")} />
+                    <KpiCard label="Received" tone="success" value={receivedValue} sub={paidSubLine} active={overviewFocus === "paid"} onClick={() => focusOverviewStatus("paid")} delay={0.06} />
+                    <KpiCard label="Overdue" tone="overdue" value={overdueValue} sub={overdueSubLine} active={overviewFocus === "overdue"} onClick={() => focusOverviewStatus("overdue")} delay={0.12} />
+                    <KpiCard label="Drafts" tone="neutral" value={allTotals?.draft.amount ?? 0} sub={draftSubLine} active={overviewFocus === "draft"} onClick={() => focusOverviewStatus("draft")} delay={0.18} />
+                  </div>
+                </BlurFade>
+
                 {overviewFocus && (
-                  <FocusedInvoiceList
-                    status={overviewFocus}
-                    invoices={periodInvoices}
-                    clients={clients}
-                  />
+                  <FocusedInvoiceList status={overviewFocus} invoices={periodInvoices} clients={clients} />
                 )}
 
-                {/* Revenue Trend + Recent Activity (two columns) */}
-                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-                  <RevenueChart series={revenueSeries} />
-                  <section className="min-w-0 rounded-lg border border-border bg-surface p-5 shadow-card" aria-labelledby="recent-activity-title">
-                    <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
-                      <div className="flex items-center gap-2">
-                        <Clock size={18} strokeWidth={1.8} className="text-premium" aria-hidden />
-                        <h2 id="recent-activity-title" className="font-display text-xl text-ink">Recent activity</h2>
+                {/* Row 3: act on it */}
+                <BlurFade delay={0.16}>
+                  <div className="grid gap-5 lg:grid-cols-3">
+                    <AttentionList items={attentionItems} onOpen={navigateToInvoiceDetail} onViewAll={() => focusOverviewStatus("overdue")} />
+                    <TopClients clients={topClients} onOpen={navigateToClientDetail} />
+                    <Card className="p-5">
+                      <CardHeader
+                        title="Recent activity"
+                        description="Latest invoices, payments and clients"
+                        action={
+                          <span className="flex items-center gap-1.5 text-xs text-ink-muted">
+                            <span className="live-dot h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
+                            Live
+                          </span>
+                        }
+                      />
+                      <div className="mt-3">
+                        <EnhancedActivityFeed events={periodActivity} invoices={invoices ?? []} />
                       </div>
-                      <span className="flex items-center gap-1.5 shrink-0">
-                        <span className="live-dot relative flex h-2 w-2 rounded-full bg-success" aria-hidden="true" />
-                        <span className="text-xs text-ink-muted">Live</span>
-                      </span>
-                    </div>
-                    <div className="pt-2">
-                      <EnhancedActivityFeed events={periodActivity} invoices={invoices ?? []} />
-                    </div>
-                    <div className="mt-4 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => navigateTo("reports")}
-                        className="inline-flex items-center gap-1.5 text-sm font-medium text-premium transition-colors duration-micro hover:text-premium/80"
-                      >
-                        View all <ArrowRight size={14} strokeWidth={1.8} aria-hidden />
-                      </button>
-                    </div>
-                  </section>
-                </div>
-
-                {/* Bottom Banner */}
-                <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-premium/10 flex items-center justify-center">
-                        <Leaf size={24} strokeWidth={1.8} className="text-premium" aria-hidden />
-                      </div>
-                      <div>
-                        <p className="font-display text-lg text-ink">Building stronger businesses together.</p>
-                        <p className="mt-1 text-sm text-ink-muted">Surfine Technology — Forging a stronger tomorrow.</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => navigateTo("create-invoice")}
-                        className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors duration-micro hover:bg-accent/90"
-                      >
-                        <Plus size={14} strokeWidth={1.8} aria-hidden />
-                        <span>Create Invoice</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => navigateTo("clients")}
-                        className="inline-flex items-center gap-2 rounded-md border border-border-strong bg-surface px-4 py-2 text-sm font-medium text-ink transition-colors duration-micro hover:border-accent hover:text-accent"
-                      >
-                        <Users size={14} strokeWidth={1.8} aria-hidden />
-                        <span>Manage Clients</span>
-                      </button>
-                    </div>
+                    </Card>
                   </div>
-                </div>
+                </BlurFade>
               </div>
             )}
           </ErrorBoundary>

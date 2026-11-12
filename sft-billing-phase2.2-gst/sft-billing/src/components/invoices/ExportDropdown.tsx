@@ -141,7 +141,7 @@ export function ExportDropdown({ invoice, className }: ExportDropdownProps) {
         aria-expanded={open}
         aria-haspopup="true"
         className={cn(
-          "flex items-center gap-1.5 rounded-md border px-3.5 py-2 text-sm font-medium transition-colors duration-micro",
+          "flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors duration-micro",
           "border-border bg-surface text-ink hover:border-border-strong",
           open && "ring-2 ring-accent/20",
         )}
@@ -153,7 +153,7 @@ export function ExportDropdown({ invoice, className }: ExportDropdownProps) {
       {open && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-50 min-w-[160px] rounded-md border border-border bg-surface-raised shadow-float overflow-hidden"
+          className="fixed z-50 w-64 overflow-hidden rounded-xl border border-border bg-surface-raised p-1 shadow-float"
           style={{
             top: menuPosition?.top ?? 0,
             left: menuPosition?.left ?? 0,
@@ -172,7 +172,7 @@ export function ExportDropdown({ invoice, className }: ExportDropdownProps) {
                   aria-busy={itemState.state === "generating"}
                   role="menuitem"
                   className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-sm text-left transition-colors duration-micro",
+                    "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-left transition-colors duration-micro",
                     itemState.state === "generating" && "cursor-wait opacity-80",
                     "hover:bg-canvas focus:outline-none focus:bg-canvas",
                   )}
@@ -185,7 +185,7 @@ export function ExportDropdown({ invoice, className }: ExportDropdownProps) {
                 {itemState.state === "error" && itemState.errorMessage && (
                   <p
                     role="alert"
-                    className="absolute right-0 top-0 z-10 mt-1.5 w-64 rounded-md border border-overdue/20 bg-surface-raised px-2.5 py-1.5 text-xs text-overdue shadow-float"
+                    className="mx-2 mb-2 rounded-md bg-overdue-bg px-2.5 py-1.5 text-xs leading-snug text-overdue"
                   >
                     {itemState.errorMessage}
                   </p>
@@ -194,7 +194,7 @@ export function ExportDropdown({ invoice, className }: ExportDropdownProps) {
                   <p
                     role="status"
                     title={itemState.warnings.join("\n")}
-                    className="absolute right-0 top-0 z-10 mt-1.5 w-72 rounded-md border border-border bg-surface-raised px-2.5 py-1.5 text-xs text-ink-muted shadow-float"
+                    className="mx-2 mb-2 rounded-md bg-canvas px-2.5 py-1.5 text-xs leading-snug text-ink-muted"
                   >
                     Downloaded. Some fields are not represented in this template.
                   </p>

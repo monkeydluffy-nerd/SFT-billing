@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, useRef, useEffect } from "react";
-import { Plus, Users, AlertTriangle, Pencil, Trash2, MoreHorizontal, ChevronDown } from "lucide-react";
+import { Plus, Users, AlertTriangle, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { Avatar, SearchField, SpotlightCard, Stat, StatGroup } from "@/components/ui/kit";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Skeleton } from "@/components/shared/SkeletonLoader";
@@ -63,26 +64,6 @@ export function ClientsPage() {
   const clientRollup = useCallback((clientId: string) => {
     return getClientRollup(clientId, invoices ?? [], payments ?? []);
   }, [invoices, payments]);
-
-  const topOutstandingClients = useMemo(() => {
-    return [...filtered]
-      .map((client) => ({
-        client,
-        rollup: clientRollup(client.id),
-      }))
-      .filter((item) => item.rollup.totalOutstanding > 0)
-      .sort((a, b) => b.rollup.totalOutstanding - a.rollup.totalOutstanding)
-      .slice(0, 5);
-  }, [filtered, clientRollup]);
-
-  const hasAnyOutstanding = useMemo(() => {
-    return [...filtered]
-      .map((client) => ({
-        client,
-        rollup: clientRollup(client.id),
-      }))
-      .filter((item) => item.rollup.totalOutstanding > 0).length > 0;
-  }, [filtered, clientRollup]);
 
   function invoiceCount(clientId: string): number {
     return invoices?.filter((invoice) => invoice.clientId === clientId).length ?? 0;
@@ -151,16 +132,6 @@ export function ClientsPage() {
     return { allowed: true };
   }
 
-  function getInitials(name: string): string {
-    return name
-      .trim()
-      .split(/\s+/)
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-  }
-
   function formatClientName(name: string): string {
     // Convert ALL CAPS to Title Case, keep "M/S" prefix lighter
     const words = name.trim().split(/\s+/);
@@ -207,7 +178,7 @@ export function ClientsPage() {
     return (
       <div>
         <PageHeader title="Clients" subtitle="Everyone you bill, in one place" />
-        <div className="px-10 py-10">
+        <div className="px-6 lg:px-8 py-10">
           <EmptyState icon={AlertTriangle} title="Couldn't load clients" description={error.message} />
         </div>
       </div>
@@ -215,284 +186,171 @@ export function ClientsPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div>
       <PageHeader
         title="Clients"
         subtitle="Everyone you bill, in one place"
         action={
-          <button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            className="flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-medium text-accent-ink transition-opacity duration-micro hover:opacity-90"
-          >
+          <Button onClick={() => setAddOpen(true)}>
             <Plus size={15} /> Add client
-          </button>
+          </Button>
         }
       />
 
-      {/* Premium Stats Cards */}
-      <div className="mb-6 px-10 grid grid-cols-1 gap-4 sm:grid-cols-3" role="region" aria-label="Client summary">
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-card hover:shadow-float transition-shadow duration-micro">
-          <div className="text-3xl font-bold text-ink tracking-tight">{totalClients}</div>
-          <div className="mt-1 text-sm text-ink-muted">Total clients</div>
+      <div className="space-y-6 px-6 pb-12 lg:px-8">
+        <div role="region" aria-label="Client summary">
+          <StatGroup className="md:[--cols:3]">
+            <Stat label="Total clients" tone="accent" value={totalClients} format={(n) => String(Math.round(n))} />
+            <Stat label="Total billed" tone="success" value={grandTotalBilled} format={(n) => formatCurrency(n)} delay={0.06} />
+            <Stat label="Outstanding" tone="caution" value={grandOutstanding} format={(n) => formatCurrency(n)} delay={0.12} />
+          </StatGroup>
         </div>
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-card hover:shadow-float transition-shadow duration-micro">
-          <div className="text-3xl font-bold text-primary font-tabular">{formatCurrency(grandTotalBilled)}</div>
-          <div className="mt-1 text-sm text-ink-muted">Total billed</div>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-card hover:shadow-float transition-shadow duration-micro relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-premium/5 to-transparent" aria-hidden="true" />
-          <div className="relative text-3xl font-bold text-warning font-tabular">{formatCurrency(grandOutstanding)}</div>
-          <div className="mt-1 text-sm text-ink-muted">Outstanding</div>
-        </div>
-      </div>
 
-      <div className="flex-1 overflow-auto px-10 pb-10">
-        <div className="mb-4">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search clients by name, GSTIN, city…"
-            className="h-11 w-full max-w-md rounded-md border border-border bg-surface px-4 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-border-strong transition-colors duration-micro"
-            aria-label="Search clients"
-          />
-        </div>
+        <SearchField value={query} onChange={setQuery} placeholder="Search clients by name, GSTIN, city…" label="Search clients" className="w-full sm:max-w-sm" />
 
         {loading ? (
-          <div className="space-y-3">
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              <Skeleton key={i} className="h-44 w-full rounded-xl" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={Users}
             title={totalClients === 0 ? "No clients yet" : "No clients match this search"}
-            description={
-              totalClients === 0
-                ? "Add your first client to start billing them."
-                : "Try a different search term."
-            }
+            description={totalClients === 0 ? "Add your first client to start billing them." : "Try a different search term."}
             action={
               totalClients === 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setAddOpen(true)}
-                  className="flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-medium text-accent-ink transition-opacity duration-micro hover:opacity-90"
-                >
+                <Button onClick={() => setAddOpen(true)}>
                   <Plus size={14} /> Add client
-                </button>
+                </Button>
               ) : null
             }
           />
         ) : (
-          <div className="rounded-lg border border-border bg-surface overflow-hidden shadow-card">
-            {/* Table Header */}
-            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 border-b border-border bg-canvas/50 px-5 py-3 text-xs font-medium text-ink-faint uppercase tracking-wider">
-              <span>Client</span>
-              <span className="text-right w-28">Invoices</span>
-              <span className="text-right w-36 font-tabular">Total Billed</span>
-              <span className="text-right w-36 font-tabular">Outstanding</span>
-            </div>
-
-            {/* Table Rows */}
-            {filtered.map((client, index) => {
+          <ul className="stagger-grid grid gap-5 sm:grid-cols-2 xl:grid-cols-3" aria-label="Clients">
+            {filtered.map((client) => {
               const rollup = clientRollup(client.id);
               const status = outstandingStatus(client.id);
-              const isEven = index % 2 === 0;
-
+              const count = invoiceCount(client.id);
+              const collected = rollup.totalBilled > 0 ? Math.max(0, Math.min(100, ((rollup.totalBilled - rollup.totalOutstanding) / rollup.totalBilled) * 100)) : 0;
               return (
-                <div
-                  key={client.id}
-                  ref={actionMenuOpen === client.id ? actionMenuRef : undefined}
-                  className={cn(
-                    "grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-5 py-4 transition-colors duration-micro",
-                    "border-b border-border/50 last:border-b-0",
-                    "hover:bg-canvas hover:shadow-card relative",
-                    "cursor-pointer",
-                    isEven ? "bg-transparent" : "bg-canvas/30"
-                  )}
-                  onClick={(e) => handleRowClick(client, e)}
-                >
-                  {/* Client Cell: Avatar + Name + GSTIN/City */}
-                  <div className="flex items-center gap-3 min-w-0" style={{ minWidth: 0 }}>
-                    {/* Avatar Initials */}
+                <li key={client.id}>
+                  <SpotlightCard className="rounded-xl border border-border bg-surface transition-colors hover:border-border-strong">
                     <div
-                      className="flex-shrink-0 w-10 h-10 rounded-lg bg-premium/10 text-premium font-medium text-sm items-center justify-center flex"
-                      aria-hidden="true"
+                      ref={actionMenuOpen === client.id ? actionMenuRef : undefined}
+                      className="cursor-pointer p-5"
+                      onClick={(e) => handleRowClick(client, e)}
                     >
-                      {getInitials(client.name)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium text-ink text-base">{formatClientName(client.name)}</div>
-                      <div className="truncate text-xs text-ink-muted flex items-center gap-1.5 mt-0.5">
-                        {client.gstin && (
-                          <>
-                            <span className="font-mono">{client.gstin}</span>
-                            <span aria-hidden="true">·</span>
-                          </>
+                      <div className="flex items-start gap-3">
+                        <Avatar name={client.name} className="h-11 w-11 text-sm" />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[15px] font-semibold text-ink">{formatClientName(client.name)}</div>
+                          <div className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-ink-muted">
+                            {client.gstin && (
+                              <>
+                                <span className="font-mono">{client.gstin}</span>
+                                <span aria-hidden="true">·</span>
+                              </>
+                            )}
+                            <span className="truncate">{extractCity(client.billingAddress)}</span>
+                          </div>
+                        </div>
+
+                        <div data-action-menu className="relative">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActionMenuOpen(actionMenuOpen === client.id ? null : client.id);
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-ink-faint transition-colors hover:bg-canvas hover:text-ink"
+                            aria-label={`Actions for ${client.name}`}
+                            aria-expanded={actionMenuOpen === client.id}
+                            aria-haspopup="true"
+                          >
+                            <MoreHorizontal size={16} />
+                          </button>
+                          {actionMenuOpen === client.id && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={() => setActionMenuOpen(null)} aria-hidden="true" />
+                              <div className="absolute right-0 top-full z-20 mt-1.5 min-w-[150px] overflow-hidden rounded-xl border border-border bg-surface-raised p-1 shadow-float-lg">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActionMenuOpen(null);
+                                    setEditClient(client);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink transition-colors hover:bg-canvas"
+                                >
+                                  <Pencil size={14} />
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActionMenuOpen(null);
+                                    setDeleteError(null);
+                                    setDeleteClient(client);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-overdue transition-colors hover:bg-overdue-bg"
+                                >
+                                  <Trash2 size={14} />
+                                  Delete
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <dl className="mt-5 grid grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <dt className="text-[11px] text-ink-faint">Invoices</dt>
+                          <dd className="font-tabular mt-0.5 font-medium text-ink">
+                            {count} {count === 1 ? "invoice" : "invoices"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] text-ink-faint">Billed</dt>
+                          <dd className="font-tabular mt-0.5 font-medium text-ink">{formatCurrency(rollup.totalBilled)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] text-ink-faint">Outstanding</dt>
+                          <dd className="font-tabular mt-0.5 font-medium text-ink">{rollup.totalOutstanding > 0 ? formatCurrency(rollup.totalOutstanding) : "—"}</dd>
+                        </div>
+                      </dl>
+
+                      <div className="mt-4 flex items-center gap-3">
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border" role="progressbar" aria-valuenow={Math.round(collected)} aria-valuemin={0} aria-valuemax={100} aria-label="Collected">
+                          <div className="h-full rounded-full bg-success transition-[width] duration-700" style={{ width: `${collected}%` }} />
+                        </div>
+                        {rollup.totalBilled > 0 && (
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium",
+                              status === "paid" && "bg-success-bg text-success",
+                              status === "pending" && "bg-caution-bg text-caution",
+                              status === "overdue" && "bg-overdue-bg text-overdue",
+                              status === null && "bg-neutral-bg text-neutral",
+                            )}
+                          >
+                            {status === "paid" && "Paid"}
+                            {status === "pending" && "Pending"}
+                            {status === "overdue" && "Overdue"}
+                            {status === null && "—"}
+                          </span>
                         )}
-                        {extractCity(client.billingAddress)}
                       </div>
                     </div>
-                  </div>
-
-                  {/* Invoices Count */}
-                  <div className="w-28 shrink-0 text-right text-sm text-ink-muted font-tabular">
-                    {invoiceCount(client.id)} {invoiceCount(client.id) === 1 ? "invoice" : "invoices"}
-                  </div>
-
-                  {/* Total Billed */}
-                  <div className="w-36 shrink-0 text-right font-tabular text-sm text-ink">
-                    {formatCurrency(rollup.totalBilled)}
-                  </div>
-
-                  {/* Outstanding with Status Pill */}
-                  <div className="w-36 shrink-0 text-right relative">
-                    <div className="flex items-center justify-end gap-2">
-                      {rollup.totalBilled > 0 && (
-                        <span className={cn(
-                          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
-                          status === "paid" && "bg-success-bg text-success",
-                          status === "pending" && "bg-caution-bg text-caution",
-                          status === "overdue" && "bg-overdue-bg text-overdue",
-                          status === null && "bg-neutral-bg text-neutral"
-                        )}>
-                          {status === "paid" && "Paid"}
-                          {status === "pending" && "Pending"}
-                          {status === "overdue" && "Overdue"}
-                          {status === null && "—"}
-                        </span>
-                      )}
-                      {rollup.totalOutstanding > 0 && status && (
-                        <span className="font-tabular text-sm text-ink font-medium whitespace-nowrap">
-                          {formatCurrency(rollup.totalOutstanding)}
-                        </span>
-                      )}
-                      {rollup.totalBilled === 0 && (
-                        <span className="text-ink-muted text-sm">—</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Action Menu (shown on hover or click) */}
-                  <div
-                    ref={actionMenuRef}
-                    data-action-menu
-                    className={cn(
-                      "absolute right-5 top-1/2 -translate-y-1/2 z-20",
-                      "opacity-0 transition-opacity duration-micro group-hover:opacity-100",
-                      actionMenuOpen === client.id ? "opacity-100 pointer-events-auto" : "pointer-events-none"
-                    )}
-                  >
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActionMenuOpen(actionMenuOpen === client.id ? null : client.id);
-                        }}
-                        className="p-1.5 rounded-lg bg-surface border border-border text-ink-muted hover:bg-canvas hover:text-ink hover:border-border-strong transition-colors duration-micro"
-                        aria-label={`Actions for ${client.name}`}
-                        aria-expanded={actionMenuOpen === client.id}
-                        aria-haspopup="true"
-                      >
-                        <MoreHorizontal size={16} />
-                      </button>
-
-                      {actionMenuOpen === client.id && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-10"
-                            onClick={() => setActionMenuOpen(null)}
-                            aria-hidden="true"
-                          />
-                          <div className="absolute right-0 top-full mt-1.5 min-w-[140px] rounded-lg border border-border bg-surface-raised shadow-float-lg overflow-hidden z-20 animate-in fade-in-0 zoom-in-95 duration-micro">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActionMenuOpen(null);
-                                setEditClient(client);
-                              }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-left text-ink hover:bg-canvas transition-colors duration-micro"
-                            >
-                              <Pencil size={14} />
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActionMenuOpen(null);
-                                setDeleteError(null);
-                                setDeleteClient(client);
-                              }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-left text-overdue hover:bg-overdue/5 transition-colors duration-micro"
-                            >
-                              <Trash2 size={14} />
-                              Delete
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  </SpotlightCard>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
-
-        {/* Bottom Panel - Top Clients by Outstanding */}
-        {filtered.length > 0 && !loading && (
-          <div className="mt-8 rounded-lg border border-border bg-surface p-5 shadow-card">
-            <h3 className="mb-4 font-medium text-ink flex items-center gap-2">
-              <ChevronDown size={16} className="text-premium" />
-              Top Outstanding
-            </h3>
-            <div className="space-y-3">
-              {topOutstandingClients.map(({ client, rollup }) => (
-                <div
-                  key={client.id}
-                  className="flex items-center justify-between gap-4 p-3 rounded-lg bg-canvas/50 hover:bg-canvas transition-colors duration-micro cursor-pointer"
-                  onClick={() => navigateToClientDetail(client.id)}
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div
-                      className="flex-shrink-0 w-8 h-8 rounded-lg bg-premium/10 text-premium font-medium text-xs items-center justify-center flex"
-                      aria-hidden="true"
-                    >
-                      {getInitials(client.name)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate font-medium text-ink text-sm">{formatClientName(client.name)}</div>
-                      <div className="truncate text-xs text-ink-muted">{extractCity(client.billingAddress)}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="font-tabular text-sm text-ink font-medium">{formatCurrency(rollup.totalOutstanding)}</span>
-                    <span className={cn(
-                      "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium",
-                      rollup.totalOverdue > 0 && "bg-overdue-bg text-overdue",
-                      rollup.totalOverdue === 0 && rollup.totalOutstanding > 0 && "bg-caution-bg text-caution"
-                    )}>
-                      {rollup.totalOverdue > 0 ? "Overdue" : "Pending"}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {!hasAnyOutstanding && (
-                <div className="text-center py-6 text-ink-muted">
-                  All clients are up to date. Great job!
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Empty space for breathing room */}
-        <div className="h-16" />
       </div>
 
       <AddClientModal open={addOpen} onClose={() => setAddOpen(false)} onCreated={handleCreated} />

@@ -1,5 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ChevronLeft,
+  ChevronRight,
   FileText,
   Send,
   Eye,
@@ -106,13 +108,22 @@ interface EnhancedActivityFeedProps {
   limit?: number;
 }
 
-export function EnhancedActivityFeed({ events, invoices = [] }: EnhancedActivityFeedProps) {
+const PAGE_SIZE = 6;
+
+export function EnhancedActivityFeed({ events, invoices = [], limit = PAGE_SIZE }: EnhancedActivityFeedProps) {
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(events.length / limit));
+  useEffect(() => {
+    if (page > pageCount - 1) setPage(pageCount - 1);
+  }, [page, pageCount]);
+  const pageEvents = useMemo(() => events.slice(page * limit, page * limit + limit), [events, page, limit]);
+
   const groupedEvents = useMemo(() => {
-    if (!events.length) return [];
+    if (!pageEvents.length) return [];
 
     const groups = new Map<string, Array<{ event: ActivityEvent; duplicateCount: number }>>();
 
-    for (const event of events) {
+    for (const event of pageEvents) {
       const date = new Date(event.occurredAt);
       const today = new Date();
       const yesterday = new Date(today);
@@ -135,7 +146,7 @@ export function EnhancedActivityFeed({ events, invoices = [] }: EnhancedActivity
     }
 
     return Array.from(groups.entries());
-  }, [events]);
+  }, [pageEvents]);
 
   if (groupedEvents.length === 0) {
     return (
@@ -147,16 +158,41 @@ export function EnhancedActivityFeed({ events, invoices = [] }: EnhancedActivity
     );
   }
 
+  const from = page * limit + 1;
+  const to = Math.min(events.length, (page + 1) * limit);
+
   return (
-    <div className="space-y-6" role="region" aria-label="Recent activity">
-      {groupedEvents.map(([group, events]) => (
-        <GroupedEvents
-          key={group}
-          group={group}
-          events={events}
-          invoices={invoices}
-        />
-      ))}
+    <div role="region" aria-label="Recent activity">
+      <div className="space-y-4">
+        {groupedEvents.map(([group, groupEvents]) => (
+          <GroupedEvents key={`${page}-${group}`} group={group} events={groupEvents} invoices={invoices} />
+        ))}
+      </div>
+      {events.length > limit && (
+        <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs text-ink-muted">
+          <span className="font-tabular">{from}–{to} of {events.length}</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              aria-label="Newer activity"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-border transition-colors hover:border-border-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+              disabled={page >= pageCount - 1}
+              aria-label="Older activity"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-border transition-colors hover:border-border-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

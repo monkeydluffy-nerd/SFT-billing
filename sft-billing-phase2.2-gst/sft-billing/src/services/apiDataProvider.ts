@@ -135,8 +135,9 @@ async function requestInvoiceFile(
 ): Promise<{ blob: Blob; warnings: string[] }> {
   const baseUrl = await getBaseUrl();
   let response: Response;
+  const token = getAuthToken();
   try {
-    response = await fetch(`${baseUrl}${path}`);
+    response = await fetch(`${baseUrl}${path}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
   } catch {
     throw new ApiError(0, "Could not reach the local billing service. Make sure it's running.");
   }

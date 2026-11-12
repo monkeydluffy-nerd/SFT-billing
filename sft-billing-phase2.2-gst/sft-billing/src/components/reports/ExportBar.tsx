@@ -1,4 +1,5 @@
 import { Download, FileSpreadsheet, Printer } from "lucide-react";
+import { Button } from "@/components/shared/Button";
 
 interface ExportBarProps {
   onExportExcel: () => void;
@@ -7,41 +8,31 @@ interface ExportBarProps {
 }
 
 /**
- * CSV and Print both work entirely client-side today. Excel export for
- * REPORTS specifically (not the per-invoice download, which is real and
- * lives on the invoice screen) isn't wired to a real generator yet, so
- * it's disabled with a tooltip explaining why - a single quiet signal
- * rather than a repeated on-screen badge.
+ * CSV and Print work entirely client-side. Excel export for REPORTS isn't
+ * wired to a generator yet (the per-invoice download is real and lives on
+ * the invoice page), so it stays disabled with an explanatory tooltip.
  */
 export function ExportBar({ onExportExcel, onExportCsv, onPrint }: ExportBarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="sm"
         onClick={onExportExcel}
         title="Report-level Excel export isn't available yet - use CSV export or the per-invoice Download Invoice action"
-        className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-ink-faint transition-colors duration-micro cursor-not-allowed opacity-50"
         disabled
       >
         <FileSpreadsheet size={13} aria-hidden />
         Export Excel
-      </button>
-      <button
-        type="button"
-        onClick={onExportCsv}
-        className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-ink-muted transition-colors duration-micro hover:border-border-strong hover:text-ink"
-      >
+      </Button>
+      <Button variant="secondary" size="sm" onClick={onExportCsv}>
         <Download size={13} aria-hidden />
         Export CSV
-      </button>
-      <button
-        type="button"
-        onClick={onPrint}
-        className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-ink-muted transition-colors duration-micro hover:border-border-strong hover:text-ink"
-      >
+      </Button>
+      <Button variant="secondary" size="sm" onClick={onPrint}>
         <Printer size={13} aria-hidden />
         Print / PDF
-      </button>
+      </Button>
     </div>
   );
 }

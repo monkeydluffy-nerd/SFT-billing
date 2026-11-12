@@ -124,7 +124,7 @@ export function NotificationBell() {
               <select
                 value={filterCategory || "all"}
                 onChange={(e) => setFilterCategory(e.target.value === "all" ? null : e.target.value)}
-                className="rounded-md border border-border bg-surface px-2 py-1 text-xs font-medium transition-colors duration-micro outline-none focus:border-premium"
+                className="rounded-lg border border-border-strong bg-surface px-2 py-1 text-xs font-medium transition-colors duration-micro outline-none focus:border-premium"
               >
                 <option value="all">All categories</option>
                 {categories.map(([value, label]) => (

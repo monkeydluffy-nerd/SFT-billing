@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import weakref
 import sys
 from collections.abc import Generator
 from contextlib import closing, contextmanager
@@ -202,7 +203,18 @@ def get_db_session() -> Generator[Session, None, None]:
         session.close()
 
 
+# Engines already confirmed to be at the latest migration. Every repository
+# calls its initializer per request; re-running the migration probe holds one
+# pooled connection while opening another, which deadlocks the pool when
+# requests arrive in parallel. Once an engine is at head it cannot regress, so
+# the probe only needs to succeed once per engine.
+_AT_HEAD_ENGINES: "weakref.WeakSet[Engine]" = weakref.WeakSet()
+
+
 def _upgrade_database(target_engine: Engine, revision: str) -> None:
+    if target_engine in _AT_HEAD_ENGINES:
+        return
+
     from alembic import command
     from alembic.config import Config
     from alembic.script import ScriptDirectory
@@ -233,6 +245,7 @@ def _upgrade_database(target_engine: Engine, revision: str) -> None:
                     target_heads = set(script.get_heads())
                     if current_version in target_heads:
                         _log_info(f"[info] Database already at latest migration ({current_version}), skipping upgrade")
+                        _AT_HEAD_ENGINES.add(target_engine)
                         return
         except Exception as e:
             # If fast path fails (e.g., table doesn't exist), fall through to full upgrade

@@ -12,7 +12,6 @@ import {
 import type { MonthlyRevenuePoint } from "@/lib/overviewMetrics";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/cn";
-import { BarChart2 } from "lucide-react";
 
 interface RevenueChartProps {
   series: MonthlyRevenuePoint[];
@@ -66,16 +65,13 @@ export function RevenueChart({ series }: RevenueChartProps) {
   const latestPoint = data[data.length - 1];
 
   return (
-    <section className="min-w-0 rounded-lg border border-border bg-surface p-5 shadow-card" aria-labelledby="revenue-trend-title">
-      <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between">
+    <section className="min-w-0" aria-labelledby="revenue-trend-title">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <BarChart2 size={18} strokeWidth={1.8} className="text-premium" aria-hidden />
-            <h2 id="revenue-trend-title" className="font-display text-xl text-ink">Revenue trend</h2>
-          </div>
-          <p className="mt-1 text-sm text-ink-muted">Collected revenue over the selected period</p>
+          <h2 id="revenue-trend-title" className="text-sm font-medium text-ink">Revenue trend</h2>
+          <p className="mt-0.5 text-xs text-ink-muted">Collected revenue over the selected period</p>
         </div>
-        <div className="flex shrink-0 overflow-hidden rounded-md border border-border text-xs">
+        <div className="flex shrink-0 overflow-hidden rounded-lg border border-border text-xs">
           {(["6M", "12M"] as ("6M" | "12M")[]).map((p) => (
             <button
               key={p}
@@ -91,7 +87,7 @@ export function RevenueChart({ series }: RevenueChartProps) {
           ))}
         </div>
       </div>
-      <div className="mt-6 h-72 w-full min-w-0 relative">
+      <div className="mt-5 h-[300px] w-full min-w-0 relative">
         {!hasRevenueData ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-center p-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-border bg-surface/50">
@@ -111,8 +107,8 @@ export function RevenueChart({ series }: RevenueChartProps) {
               <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgb(var(--color-premium))" stopOpacity={0.18} />
-                    <stop offset="100%" stopColor="rgb(var(--color-premium))" stopOpacity={0} />
+                    <stop offset="0%" stopColor="rgb(var(--color-accent))" stopOpacity={0.18} />
+                    <stop offset="100%" stopColor="rgb(var(--color-accent))" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -143,7 +139,7 @@ export function RevenueChart({ series }: RevenueChartProps) {
                 <Area
                   type="monotone"
                   dataKey="revenue"
-                  stroke="rgb(var(--color-premium))"
+                  stroke="rgb(var(--color-accent))"
                   strokeWidth={2.25}
                   fill="url(#revenueFill)"
                   isAnimationActive={false}
@@ -152,8 +148,8 @@ export function RevenueChart({ series }: RevenueChartProps) {
                   <Dot
                     r={5}
                     strokeWidth={2}
-                    stroke="rgb(var(--color-premium))"
-                    fill="rgb(var(--color-premium))"
+                    stroke="rgb(var(--color-accent))"
+                    fill="rgb(var(--color-accent))"
                     className="latest-point"
                   />
                 </Area>

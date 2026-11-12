@@ -18,7 +18,7 @@ interface AttentionListProps {
  */
 export function AttentionList({ items, onOpenInvoice }: AttentionListProps) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border">
+    <div className="overflow-hidden rounded-xl border border-border bg-surface">
       {items.map((item, index) => {
         const isClickable = Boolean(item.invoiceId);
         return (

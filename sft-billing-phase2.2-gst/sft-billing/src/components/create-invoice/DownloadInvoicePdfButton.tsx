@@ -78,7 +78,7 @@ export function DownloadInvoicePdfButton({
         <p
           role="status"
           title={warnings.join("\n")}
-          className="absolute right-0 top-full z-10 mt-1.5 w-72 rounded-md border border-border bg-surface-raised px-2.5 py-1.5 text-xs text-ink-muted shadow-float"
+          className="absolute right-0 top-full z-10 mt-1.5 w-72 rounded-lg border border-border-strong bg-surface-raised px-2.5 py-1.5 text-xs text-ink-muted shadow-float"
         >
           Downloaded. Some fields are not represented in this template.
         </p>

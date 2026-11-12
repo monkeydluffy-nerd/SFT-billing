@@ -42,11 +42,14 @@ export default {
       fontFamily: {
         display: ["var(--font-display)"],
         sans: ["var(--font-sans)"],
+        mono: ["var(--font-mono)"],
       },
       borderRadius: {
         sm: "var(--radius-sm)",
-        md: "var(--radius-md)",
-        lg: "var(--radius-lg)",
+        md: "12px",
+        lg: "var(--radius-md)",
+        xl: "var(--radius-lg)",
+        "2xl": "var(--radius-lg)",
       },
       boxShadow: {
         card: "var(--shadow-card)",
@@ -70,8 +73,8 @@ export default {
         lg: ["1.125rem", { lineHeight: "1.5" }],
         xl: ["1.375rem", { lineHeight: "1.35" }],
         "2xl": ["1.75rem", { lineHeight: "1.25" }],
-        hero: ["2.75rem", { lineHeight: "1.1", letterSpacing: "-0.01em" }],
-        "hero-lg": ["3.5rem", { lineHeight: "1.05", letterSpacing: "-0.015em" }],
+        hero: ["2rem", { lineHeight: "1.15", letterSpacing: "-0.025em" }],
+        "hero-lg": ["2.5rem", { lineHeight: "1.1", letterSpacing: "-0.03em" }],
       },
     },
   },

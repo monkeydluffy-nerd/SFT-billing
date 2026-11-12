@@ -28,7 +28,7 @@ export function ClientInsightsPanel({ insights }: ClientInsightsProps) {
       {hasAnyFactCard && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {highestOutstandingClient && (
-            <div className="rounded-lg border border-border bg-surface p-4">
+            <div className="rounded-xl border border-border bg-surface p-5">
               <p className="flex items-center gap-1.5 text-xs font-medium text-ink-muted">
                 <AlertCircle size={13} className="text-caution" aria-hidden />
                 Highest outstanding
@@ -38,7 +38,7 @@ export function ClientInsightsPanel({ insights }: ClientInsightsProps) {
             </div>
           )}
           {largestBilledClient && (
-            <div className="rounded-lg border border-border bg-surface p-4">
+            <div className="rounded-xl border border-border bg-surface p-5">
               <p className="flex items-center gap-1.5 text-xs font-medium text-ink-muted">
                 <Crown size={13} className="text-premium" aria-hidden />
                 Largest billed client
@@ -48,7 +48,7 @@ export function ClientInsightsPanel({ insights }: ClientInsightsProps) {
             </div>
           )}
           {strongestCollectionClient && (
-            <div className="rounded-lg border border-border bg-surface p-4">
+            <div className="rounded-xl border border-border bg-surface p-5">
               <p className="flex items-center gap-1.5 text-xs font-medium text-ink-muted">
                 <ShieldCheck size={13} className="text-success" aria-hidden />
                 Strongest collection activity
