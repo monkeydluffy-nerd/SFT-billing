@@ -54,8 +54,8 @@ def _integer_to_indian_words(value: int) -> str:
 
 
 def amount_in_words(total: float) -> str:
-    rupees = int(abs(total))
-    paise = round((abs(total) - rupees) * 100)
+    total_paise = round(round(abs(total), 2) * 100)
+    rupees, paise = divmod(total_paise, 100)
 
     rupee_words = f"{_integer_to_indian_words(rupees)} Rupees"
     paise_words = f" and {_integer_to_indian_words(paise)} Paise" if paise > 0 else ""

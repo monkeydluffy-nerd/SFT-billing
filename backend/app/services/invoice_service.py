@@ -1,19 +1,23 @@
 ﻿"""Invoice CRUD, including its owned InvoiceItems rows and derived totals/status.
 
 An Invoice returned from this service always includes `items` (joined
-from InvoiceItems) and `totals`/`status` (computed fresh from
-calculation_service) — never stored/stale values from the sheet.
+from SQLite) and `totals`/`status` (computed fresh from calculation_service).
+Payment data and activity logging remain Excel-backed compatibility boundaries.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from app.excel.constants import SHEET_CLIENTS, SHEET_INVOICE_ITEMS, SHEET_INVOICES, SHEET_PAYMENTS
-from app.excel.rows import append_row, delete_row, find_row_index, read_rows, write_row
-from app.excel.workbook import load_workbook_safely, save_workbook
+from app.excel.workbook import workbook_lock
+from app.repositories.client_repository import client_repository
+from app.repositories.invoice_repository import invoice_repository
+from app.repositories.payment_repository import payment_repository
 from app.services import activity_service
 from app.services.calculation_service import compute_invoice_status, compute_invoice_totals
-from app.services.numbering_service import is_invoice_number_taken, next_invoice_number
+from app.services.numbering_service import (
+    get_reserved_invoice_number,
+    reserve_invoice_number,
+)
 from app.utils.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.utils.validators import is_valid_iso_date, new_id, now_iso
 
@@ -60,24 +64,13 @@ def _validate_items(items: list[dict[str, Any]]) -> dict[str, str]:
     return errors
 
 
-def _client_exists(wb, client_id: str) -> bool:
-    rows = read_rows(wb[SHEET_CLIENTS], SHEET_CLIENTS)
-    return any(r["id"] == client_id for r in rows)
+def _client_exists(client_id: str) -> bool:
+    return client_repository.exists_by_id(client_id)
 
 
-def _items_for_invoice(wb, invoice_id: str) -> list[dict[str, Any]]:
-    rows = read_rows(wb[SHEET_INVOICE_ITEMS], SHEET_INVOICE_ITEMS)
-    return [r for r in rows if r["invoiceId"] == invoice_id]
-
-
-def _paid_amount_for_invoice(wb, invoice_id: str) -> float:
-    rows = read_rows(wb[SHEET_PAYMENTS], SHEET_PAYMENTS)
-    return sum(float(r["amount"]) for r in rows if r["invoiceId"] == invoice_id)
-
-
-def _hydrate(wb, invoice_row: dict[str, Any]) -> dict[str, Any]:
-    items = _items_for_invoice(wb, invoice_row["id"])
-    paid_amount = _paid_amount_for_invoice(wb, invoice_row["id"])
+def _hydrate(invoice_row: dict[str, Any]) -> dict[str, Any]:
+    items = invoice_row["items"]
+    paid_amount = payment_repository.total_paid(invoice_row["id"])
     totals = compute_invoice_totals(
         items=items,
         cgst_rate=float(invoice_row["cgstRate"]),
@@ -133,25 +126,21 @@ def _hydrate(wb, invoice_row: dict[str, Any]) -> dict[str, Any]:
 
 
 def list_invoices() -> list[dict[str, Any]]:
-    wb = load_workbook_safely()
-    rows = read_rows(wb[SHEET_INVOICES], SHEET_INVOICES)
-    return [_hydrate(wb, row) for row in rows]
+    return [_hydrate(row) for row in invoice_repository.list_all()]
 
 
 def get_invoice(invoice_id: str) -> dict[str, Any]:
-    wb = load_workbook_safely()
-    rows = read_rows(wb[SHEET_INVOICES], SHEET_INVOICES)
-    for row in rows:
-        if row["id"] == invoice_id:
-            return _hydrate(wb, row)
-    raise NotFoundError(f"Invoice {invoice_id} not found.")
+    invoice = invoice_repository.get_by_id(invoice_id)
+    if invoice is None:
+        raise NotFoundError(f"Invoice {invoice_id} not found.")
+    return _hydrate(invoice)
 
 
 def list_invoices_for_client(client_id: str) -> list[dict[str, Any]]:
     return [inv for inv in list_invoices() if inv["clientId"] == client_id]
 
 
-def create_invoice(payload: dict[str, Any]) -> dict[str, Any]:
+def _create_invoice(payload: dict[str, Any]) -> dict[str, Any]:
     header_errors = _validate_header(payload)
     items = payload.get("items") or []
     item_errors = _validate_items(items)
@@ -161,19 +150,16 @@ def create_invoice(payload: dict[str, Any]) -> dict[str, Any]:
     if errors:
         raise ValidationFailedError(errors)
 
-    wb = load_workbook_safely()
-    if not _client_exists(wb, payload["clientId"]):
+    if not _client_exists(payload["clientId"]):
         raise NotFoundError(f"Client {payload['clientId']} not found.")
 
-    number = payload.get("number") or next_invoice_number(wb)
-    if is_invoice_number_taken(wb, number):
-        raise ConflictError(f"Invoice number {number} already exists.")
-
     invoice_id = payload.get("id") or new_id("iv")
+    reserved = get_reserved_invoice_number(invoice_id)
+    if reserved is None and payload.get("number"):
+        raise ConflictError("Invoice number must be reserved by the server.")
     is_draft = bool(payload.get("isDraft", True))
     invoice_row = {
         "id": invoice_id,
-        "number": number,
         "clientId": payload["clientId"],
         "issueDate": payload["issueDate"],
         "dueDate": payload["dueDate"],
@@ -196,37 +182,48 @@ def create_invoice(payload: dict[str, Any]) -> dict[str, Any]:
         "paidAt": None,
         "cancelledAt": None,
     }
-    append_row(wb[SHEET_INVOICES], SHEET_INVOICES, invoice_row)
-
-    items_ws = wb[SHEET_INVOICE_ITEMS]
-    for item in items:
-        append_row(items_ws, SHEET_INVOICE_ITEMS, {
+    for key, value in payload.items():
+        if key.endswith("Snapshot"):
+            invoice_row[key] = value
+    item_rows = [
+        {
             "id": item.get("id") or new_id("li"),
             "invoiceId": invoice_id,
             "productId": item.get("productId"),
             "description": item["description"].strip(),
             "hsnCode": item.get("hsnCode"),
             "quantity": float(item["quantity"]),
-            "unitPrice": float(item["unitPrice"]),
-        })
+            "unitPrice": item["unitPrice"],
+        }
+        for item in items
+    ]
 
-    save_workbook(wb)
+    # Reserve number and create invoice in a single transaction to avoid ghost reservations.
+    with invoice_repository._session_factory.begin() as session:
+        number = reserved or reserve_invoice_number(invoice_id, session=session)
+        invoice_row["number"] = number
+        created = invoice_repository.create(invoice_row, item_rows, session=session)
+        if created is None:
+            raise NotFoundError(f"Client {payload['clientId']} not found.")
 
+    # Activity persistence remains in the legacy Excel-backed subsystem.
     activity_service.add_activity_event({
         "type": "invoice_created",
         "summary": f"Invoice {number} created",
         "clientId": payload["clientId"],
         "invoiceId": invoice_id,
     })
+    return _hydrate(created)
 
-    return get_invoice(invoice_id)
+
+def create_invoice(payload: dict[str, Any]) -> dict[str, Any]:
+    with workbook_lock():
+        return _create_invoice(payload)
 
 
 def update_invoice(invoice_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-    wb = load_workbook_safely()
-    ws = wb[SHEET_INVOICES]
-    row_num = find_row_index(ws, SHEET_INVOICES, "id", invoice_id)
-    if row_num is None:
+    current = invoice_repository.get_by_id(invoice_id)
+    if current is None:
         raise NotFoundError(f"Invoice {invoice_id} not found.")
 
     header_errors = _validate_header(payload, partial=True)
@@ -236,10 +233,7 @@ def update_invoice(invoice_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     if errors:
         raise ValidationFailedError(errors)
 
-    current_rows = read_rows(ws, SHEET_INVOICES)
-    current = current_rows[row_num - 2]
-
-    if payload.get("clientId") and not _client_exists(wb, payload["clientId"]):
+    if payload.get("clientId") and not _client_exists(payload["clientId"]):
         raise NotFoundError(f"Client {payload['clientId']} not found.")
 
     updated = dict(current)
@@ -264,46 +258,109 @@ def update_invoice(invoice_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     if "cancelledAt" in payload and payload["cancelledAt"] is not None:
         updated["cancelledAt"] = payload["cancelledAt"]
 
-    write_row(ws, SHEET_INVOICES, row_num, updated)
-
+    for key, value in payload.items():
+        if key.endswith("Snapshot"):
+            updated[key] = value
+    item_rows = None
     if items is not None:
-        items_ws = wb[SHEET_INVOICE_ITEMS]
-        # Replace all items for this invoice: delete existing rows, append the new set.
-        item_rows = read_rows(items_ws, SHEET_INVOICE_ITEMS)
-        # Delete from the bottom up so row numbers of not-yet-deleted rows don't shift.
-        to_delete = [
-            idx for idx, r in enumerate(item_rows, start=2) if r["invoiceId"] == invoice_id
-        ]
-        for excel_row_num in reversed(to_delete):
-            delete_row(items_ws, excel_row_num)
-        for item in items:
-            append_row(items_ws, SHEET_INVOICE_ITEMS, {
+        item_rows = [
+            {
                 "id": item.get("id") or new_id("li"),
                 "invoiceId": invoice_id,
                 "productId": item.get("productId"),
                 "description": item["description"].strip(),
                 "hsnCode": item.get("hsnCode"),
                 "quantity": float(item["quantity"]),
-                "unitPrice": float(item["unitPrice"]),
-            })
-
-    save_workbook(wb)
-
-    return get_invoice(invoice_id)
+                "unitPrice": item["unitPrice"],
+            }
+            for item in items
+        ]
+    persisted = invoice_repository.update(invoice_id, updated, item_rows)
+    if persisted is None:
+        raise NotFoundError(f"Invoice {invoice_id} not found.")
+    return _hydrate(persisted)
 
 
 def delete_invoice(invoice_id: str) -> None:
-    wb = load_workbook_safely()
-    ws = wb[SHEET_INVOICES]
-    row_num = find_row_index(ws, SHEET_INVOICES, "id", invoice_id)
-    if row_num is None:
+    if not invoice_repository.delete(invoice_id):
         raise NotFoundError(f"Invoice {invoice_id} not found.")
-    delete_row(ws, row_num)
 
-    items_ws = wb[SHEET_INVOICE_ITEMS]
-    item_rows = read_rows(items_ws, SHEET_INVOICE_ITEMS)
-    to_delete = [idx for idx, r in enumerate(item_rows, start=2) if r["invoiceId"] == invoice_id]
-    for excel_row_num in reversed(to_delete):
-        delete_row(items_ws, excel_row_num)
 
-    save_workbook(wb)
+def clear_invoice_history(confirmation_token: str) -> dict[str, int]:
+    """
+    Clear all invoice history while preserving clients and products.
+
+    This operation is irreversible and requires explicit confirmation.
+    Deletes: invoices, invoice_items, payments, inventory_movements linked to invoices,
+    invoice_number_reservations, and activities linked to invoices.
+
+    Preserves: clients, products, product stock, inventory balances, workspace settings,
+    business profile, and unrelated activity logs.
+
+    Args:
+        confirmation_token: Must be exactly "CLEAR_INVOICE_HISTORY" to confirm
+
+    Returns:
+        Dictionary with counts of deleted records
+    """
+    if confirmation_token != "CLEAR_INVOICE_HISTORY":
+        raise ValidationFailedError(
+            {"confirmation": "Invalid confirmation token. Must be 'CLEAR_INVOICE_HISTORY'."}
+        )
+
+    from app.database.session import SessionLocal
+    from app.database.models import (
+        Invoice, InvoiceItem, Payment, InventoryMovement,
+        InvoiceNumberReservation, Activity
+    )
+    from sqlalchemy import delete, func, select
+
+    deleted_counts = {
+        "invoices": 0,
+        "invoice_items": 0,
+        "payments": 0,
+        "inventory_movements": 0,
+        "invoice_number_reservations": 0,
+        "activities": 0,
+    }
+
+    with SessionLocal.begin() as session:
+        # Get all invoice IDs first
+        invoice_ids = [row[0] for row in session.execute(select(Invoice.id)).all()]
+
+        if not invoice_ids:
+            return deleted_counts
+
+        # 1. Delete invoice_items (FK to invoices with RESTRICT)
+        result = session.execute(delete(InvoiceItem).where(InvoiceItem.invoice_id.in_(invoice_ids)))
+        deleted_counts["invoice_items"] = result.rowcount
+
+        # 2. Delete payments (FK constraint on invoiceId+clientId with RESTRICT)
+        result = session.execute(delete(Payment).where(Payment.invoice_id.in_(invoice_ids)))
+        deleted_counts["payments"] = result.rowcount
+
+        # 3. Delete inventory_movements linked to invoices (FK with RESTRICT)
+        result = session.execute(
+            delete(InventoryMovement).where(InventoryMovement.invoice_id.in_(invoice_ids))
+        )
+        deleted_counts["inventory_movements"] = result.rowcount
+
+        # 4. Delete invoice_number_reservations for these invoices
+        result = session.execute(
+            delete(InvoiceNumberReservation).where(
+                InvoiceNumberReservation.reserved_for.in_(invoice_ids)
+            )
+        )
+        deleted_counts["invoice_number_reservations"] = result.rowcount
+
+        # 5. Delete activities linked to invoices (FK with SET NULL, but we want clean history)
+        result = session.execute(delete(Activity).where(Activity.invoice_id.in_(invoice_ids)))
+        deleted_counts["activities"] = result.rowcount
+
+        # 6. Finally delete all invoices
+        result = session.execute(delete(Invoice).where(Invoice.id.in_(invoice_ids)))
+        deleted_counts["invoices"] = result.rowcount
+
+        # Session will commit on exit from context manager
+
+    return deleted_counts

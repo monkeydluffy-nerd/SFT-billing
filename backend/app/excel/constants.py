@@ -12,6 +12,7 @@ SHEET_INVOICES = "Invoices"
 SHEET_INVOICE_ITEMS = "InvoiceItems"
 SHEET_PAYMENTS = "Payments"
 SHEET_ACTIVITIES = "Activities"
+SHEET_INVOICE_NUMBER_RESERVATIONS = "InvoiceNumberReservations"
 
 ALL_SHEETS = [
     SHEET_BUSINESS_PROFILE,
@@ -20,6 +21,7 @@ ALL_SHEETS = [
     SHEET_INVOICE_ITEMS,
     SHEET_PAYMENTS,
     SHEET_ACTIVITIES,
+    SHEET_INVOICE_NUMBER_RESERVATIONS,
 ]
 
 # BusinessProfile is a single-record "key/value" sheet (one header row +
@@ -32,8 +34,10 @@ BUSINESS_PROFILE_HEADERS = [
 ]
 
 CLIENTS_HEADERS = [
-    "id", "name", "contactName", "email", "phone", "billingAddress", "gstin", "clientSince", "notes",
+    "id", "name", "contactName", "email", "phone", "billingAddress", "gstin", "pan", "notes",
 ]
+
+INVOICE_NUMBER_RESERVATIONS_HEADERS = ["number", "financialYear", "sequence", "reservedFor", "reservedAt"]
 
 INVOICES_HEADERS = [
     "id", "number", "clientId", "issueDate", "dueDate",
@@ -81,4 +85,5 @@ HEADERS_BY_SHEET = {
     SHEET_INVOICE_ITEMS: INVOICE_ITEMS_HEADERS,
     SHEET_PAYMENTS: PAYMENTS_HEADERS,
     SHEET_ACTIVITIES: ACTIVITIES_HEADERS,
+    SHEET_INVOICE_NUMBER_RESERVATIONS: INVOICE_NUMBER_RESERVATIONS_HEADERS,
 }

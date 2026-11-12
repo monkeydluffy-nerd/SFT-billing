@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { OverviewPage } from "@/pages/OverviewPage";
 import { InvoicesPage } from "@/pages/InvoicesPage";
@@ -28,7 +28,7 @@ export function App() {
   const currentPage = useWorkspaceStore((s) => s.currentPage);
   const selectedClientId = useWorkspaceStore((s) => s.selectedClientId);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const login = useAuthStore((s) => s.login);
+  const checkAuth = useAuthStore((s) => s.checkAuth);
 
   const handleReady = useCallback(() => {
     setAppReady(true);
@@ -37,6 +37,17 @@ export function App() {
   const handleError = useCallback((error: string) => {
     setBackendError(error);
   }, []);
+
+  // Check authentication state on startup
+  useEffect(() => {
+    let mounted = true;
+    checkAuth().then(() => {
+      if (mounted) {
+        // Auth check complete, state updated in store
+      }
+    });
+    return () => { mounted = false; };
+  }, [checkAuth]);
 
   // Show loading screen until backend is ready
   if (!appReady) {
@@ -86,13 +97,8 @@ export function App() {
         logoSrc="/surfine-technology-logo.png"
         version="0.1.1"
         onSubmit={async (credentials) => {
-          // TODO: Replace with real authentication call to backend
-          // For now, accept any non-empty credentials
-          if (credentials.username && credentials.password) {
-            login(credentials.username);
-          } else {
-            throw new Error("Invalid credentials");
-          }
+          const { login } = useAuthStore.getState();
+          await login(credentials.username, credentials.password);
         }}
       />
     );

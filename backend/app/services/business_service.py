@@ -1,13 +1,9 @@
-﻿"""BusinessProfile is a single-record sheet: one header row + at most one
-data row. get() seeds sensible (empty-ish) defaults if that row is
-missing, rather than ever inventing demo values."""
+"""Business Profile behavior and API-shape conversion."""
 from __future__ import annotations
 
 from typing import Any
 
-from app.excel.constants import SHEET_BUSINESS_PROFILE
-from app.excel.rows import read_rows
-from app.excel.workbook import load_workbook_safely, save_workbook
+from app.repositories.business_profile_repository import business_profile_repository
 
 _DEFAULTS: dict[str, Any] = {
     "name": "Your Company",
@@ -46,10 +42,10 @@ def _row_to_profile(row: dict[str, Any]) -> dict[str, Any]:
             "sgstRate": float(row.get("defaultGst_sgstRate") or 0),
         }
     return {
-        "name": row.get("name") or _DEFAULTS["name"],
+        "name": row.get("name", _DEFAULTS["name"]),
         "logoUrl": row.get("logoUrl"),
         "address": row.get("address") or "",
-        "email": row.get("email") or _DEFAULTS["email"],
+        "email": row.get("email", _DEFAULTS["email"]),
         "phone": row.get("phone"),
         "gstin": row.get("gstin"),
         "pan": row.get("pan"),
@@ -61,21 +57,14 @@ def _row_to_profile(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_business_profile() -> dict[str, Any]:
-    wb = load_workbook_safely()
-    ws = wb[SHEET_BUSINESS_PROFILE]
-    rows = read_rows(ws, SHEET_BUSINESS_PROFILE)
-    if not rows:
-        return _row_to_profile(_DEFAULTS)
-    return _row_to_profile(rows[0])
+    current = business_profile_repository.get_current()
+    return _row_to_profile(current if current is not None else _DEFAULTS)
 
 
 def update_business_profile(update: dict[str, Any]) -> dict[str, Any]:
-    wb = load_workbook_safely()
-    ws = wb[SHEET_BUSINESS_PROFILE]
-    rows = read_rows(ws, SHEET_BUSINESS_PROFILE)
-    current = rows[0] if rows else dict(_DEFAULTS)
+    current = business_profile_repository.get_current()
+    flat: dict[str, Any] = dict(current if current is not None else _DEFAULTS)
 
-    flat: dict[str, Any] = dict(current)
     for key, value in update.items():
         if value is None:
             continue
@@ -91,11 +80,5 @@ def update_business_profile(update: dict[str, Any]) -> dict[str, Any]:
         else:
             flat[key] = value
 
-    # Rewrite row 2 in place (single-record sheet).
-    from app.excel.constants import BUSINESS_PROFILE_HEADERS
-
-    for col_index, header in enumerate(BUSINESS_PROFILE_HEADERS, start=1):
-        ws.cell(row=2, column=col_index, value=flat.get(header))
-
-    save_workbook(wb)
-    return _row_to_profile(flat)
+    persisted = business_profile_repository.save_current(flat)
+    return _row_to_profile(persisted)

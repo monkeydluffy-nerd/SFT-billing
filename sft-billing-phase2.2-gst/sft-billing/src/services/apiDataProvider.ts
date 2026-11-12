@@ -20,6 +20,7 @@ import type {
 } from "@/types";
 import { mockReports, mockCurrentUser } from "@/data";
 import { initializeBackendConnection } from "./backendPort";
+import { useAuthStore } from "@/hooks/useAuthStore";
 
 /**
  * Real HTTP implementation of DataProvider, talking to the local FastAPI
@@ -69,6 +70,10 @@ async function getBaseUrl(): Promise<string> {
   return apiBaseUrl;
 }
 
+function getAuthToken(): string | null {
+  return useAuthStore.getState().token;
+}
+
 class ApiError extends Error {
   constructor(
     public status: number,
@@ -86,9 +91,13 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const baseUrl = await getBaseUrl();
+  const token = getAuthToken();
   let response: Response;
   const isMultipart = typeof FormData !== "undefined" && init?.body instanceof FormData;
   const headers = new Headers(init?.headers);
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
   if (!isMultipart && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }

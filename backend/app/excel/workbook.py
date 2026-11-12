@@ -6,8 +6,11 @@ correctly-shaped openpyxl Workbook on disk and how to save it safely.
 """
 from __future__ import annotations
 
+import os
 import shutil
+import sys
 import threading
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -19,8 +22,28 @@ from openpyxl.worksheet.worksheet import Worksheet
 from app.excel.constants import ALL_SHEETS, HEADERS_BY_SHEET
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = BASE_DIR / "data"
-BACKUPS_DIR = BASE_DIR / "backups"
+
+
+def _resolve_application_data_dir(
+    is_frozen: bool | None = None,
+    local_appdata: str | None = None,
+) -> Path:
+    if is_frozen is None:
+        is_frozen = getattr(sys, "frozen", False)
+    if not is_frozen:
+        return BASE_DIR
+
+    if local_appdata is None:
+        local_appdata = os.environ.get("LOCALAPPDATA")
+    appdata = local_appdata
+    if not appdata:
+        raise RuntimeError("LOCALAPPDATA is required for persistent application data.")
+    return Path(appdata).expanduser() / "SFT Billing"
+
+
+APP_DATA_DIR = _resolve_application_data_dir()
+DATA_DIR = APP_DATA_DIR / "data"
+BACKUPS_DIR = APP_DATA_DIR / "backups"
 WORKBOOK_PATH = DATA_DIR / "SFT_Billing.xlsx"
 
 # All Excel reads/writes happen through this module, and every write is
@@ -29,6 +52,12 @@ WORKBOOK_PATH = DATA_DIR / "SFT_Billing.xlsx"
 # every workbook read+modify+save cycle to avoid a lost update or a
 # corrupted file from two requests writing at once.
 _lock = threading.RLock()
+
+
+@contextmanager
+def workbook_lock():
+    with _lock:
+        yield
 
 HEADER_FILL = PatternFill(start_color="1F5A44", end_color="1F5A44", fill_type="solid")
 HEADER_FONT = Font(color="FFFFFF", bold=True)

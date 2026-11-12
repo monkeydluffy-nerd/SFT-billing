@@ -80,7 +80,7 @@
         "signingIdentity": null
       },
       "publisher": "SURFINE TECHNOLOGY",
-      "resources": ["sft_billing_initial.db"],
+      "resources": ["resources/sft_billing_initial.db"],
       "shortDescription": "SFT Billing Desktop App",
       "targets": ["nsis", "msi"],
       "windows": {

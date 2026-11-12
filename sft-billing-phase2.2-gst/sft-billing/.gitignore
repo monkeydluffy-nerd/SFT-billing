@@ -17,7 +17,7 @@ __pycache__/
 
 # Local and runtime databases. The approved first-run seed is intentional.
 *.db
-!src-tauri/sft_billing_initial.db
+!src-tauri/resources/sft_billing_initial.db
 *.db-shm
 *.db-wal
 *.sqlite*
@@ -35,6 +35,8 @@ venv/
 # Local exports, audit output, and one-off editing/check scripts
 SFT-Invoice-INV-1001.pdf
 SFT_BILLING_ERROR_AUDIT.md
+*.backup
+scripts/inspect-db.*
 build_check.bat
 check_braces.py
 check_file.cjs
@@ -42,5 +44,6 @@ fix_*.py
 temp_*
 tsc_output.txt
 update-logo-datauri.*
+src.zip
 
 .DS_Store

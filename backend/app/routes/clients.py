@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from app.auth import get_current_user
 from app.services import client_service
 from app.utils.http_errors import raise_as_http
 
-router = APIRouter(prefix="/api/clients", tags=["clients"])
+router = APIRouter(prefix="/api/clients", tags=["clients"], dependencies=[Depends(get_current_user)])
 
 
 @router.get("")

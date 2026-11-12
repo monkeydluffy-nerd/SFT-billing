@@ -7,6 +7,8 @@ from unittest.mock import patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from openpyxl import load_workbook
+from sqlalchemy.orm import sessionmaker
 
 from app.excel import workbook as workbook_module
 from app.excel.constants import (
@@ -18,7 +20,12 @@ from app.excel.constants import (
     SHEET_PAYMENTS,
 )
 from app.excel.rows import append_row, read_rows
-from app.excel.workbook import WorkbookAccessError, create_new_workbook
+from app.excel.workbook import create_new_workbook
+from app.database.session import create_database_engine, shutdown_database
+from app.repositories.client_repository import ClientRepository
+from app.repositories.invoice_repository import InvoiceRepository
+from app.repositories.payment_repository import PaymentRepository
+from app.repositories.activity_repository import ActivityRepository
 from app.routes.payments import router
 from app.services import activity_service, payment_service
 from app.services.payment_proof_service import (
@@ -35,9 +42,45 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        import uuid
+        cls.unique_username = f"testuser_{uuid.uuid4().hex[:8]}"
+
         app = FastAPI()
         app.include_router(router)
+        from app.routes.auth import router as auth_router
+        app.include_router(auth_router)
         cls.client = TestClient(app)
+        cls._auth_setup_done = False
+
+    def _ensure_auth(self):
+        if not self._auth_setup_done:
+            from app.services.auth_service import create_user, get_user_by_username
+            from app.database.session import get_db_session
+
+            # Create a test user in the global database (or use existing one)
+            db_gen = get_db_session()
+            db = next(db_gen)
+            try:
+                existing_user = get_user_by_username(db, self.unique_username)
+                if existing_user is None:
+                    create_user(db, username=self.unique_username, password="TestPass123!", is_admin=True)
+                    db.commit()
+            finally:
+                next(db_gen, None)
+                db.close()
+
+            # Login to get a session token
+            login_response = self.client.post(
+                "/api/auth/login",
+                json={"username": self.unique_username, "password": "TestPass123!", "remember": True}
+            )
+            self.assertEqual(login_response.status_code, 200)
+            self.token = login_response.json()["token"]
+            self.auth_headers = {"Authorization": f"Bearer {self.token}"}
+            self._auth_setup_done = True
+            self.token = login_response.json()["token"]
+            self.auth_headers = {"Authorization": f"Bearer {self.token}"}
+            self._auth_setup_done = True
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -49,46 +92,61 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
         self.data_dir.mkdir(parents=True)
 
         workbook = create_new_workbook()
-        append_row(
-            workbook[SHEET_CLIENTS],
-            SHEET_CLIENTS,
+        workbook.save(self.workbook_path)
+
+        self.engine = create_database_engine(
+            f"sqlite:///{(temp_root / 'payments.db').as_posix()}"
+        )
+        self.session_factory = sessionmaker(
+            bind=self.engine,
+            autoflush=False,
+            autocommit=False,
+            expire_on_commit=False,
+        )
+        self.client_repository = ClientRepository(self.session_factory, self.engine)
+        self.invoice_repository = InvoiceRepository(self.session_factory, self.engine)
+        self.payment_repository = PaymentRepository(self.session_factory, self.engine)
+        self.activity_repository = ActivityRepository(
+            self.session_factory, self.engine
+        )
+        self.client_repository.create(
             {
                 "id": "client-integration",
                 "name": "Integration Client",
                 "contactName": "Integration Contact",
                 "email": "integration@example.com",
+                "phone": "123",
                 "billingAddress": "Integration Address",
-            },
+                "gstin": "29AAAAA0000A1Z5",
+                "pan": "AAAAA0000A",
+                "notes": None,
+            }
         )
-        append_row(
-            workbook[SHEET_INVOICES],
-            SHEET_INVOICES,
+        self.invoice_repository._ensure_schema()
+        self.payment_repository._ensure_schema()
+        self.activity_repository._ensure_schema()
+        self.invoice_repository.create(
             {
                 "id": "invoice-integration",
                 "number": "INV-INTEGRATION",
                 "clientId": "client-integration",
-                "issueDate": "2025-06-01T00:00:00+00:00",
-                "dueDate": "2025-06-30T00:00:00+00:00",
+                "issueDate": "2025-06-01",
+                "dueDate": "2025-06-30",
                 "cgstRate": 0.09,
                 "sgstRate": 0.09,
                 "discount": 0,
                 "roundOff": 0,
                 "isDraft": False,
             },
+            [
+                {
+                    "id": "line-integration",
+                    "description": "Integration service",
+                    "quantity": 1,
+                    "unitPrice": 1000,
+                }
+            ],
         )
-        append_row(
-            workbook[SHEET_INVOICE_ITEMS],
-            SHEET_INVOICE_ITEMS,
-            {
-                "id": "line-integration",
-                "invoiceId": "invoice-integration",
-                "description": "Integration service",
-                "quantity": 1,
-                "unitPrice": 1000,
-            },
-        )
-        workbook.save(self.workbook_path)
-
         self.attachment_service = PaymentProofAttachmentService(self.attachment_root)
         self.runtime = ExitStack()
         self.runtime.enter_context(
@@ -99,30 +157,43 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
             patch.object(workbook_module, "BACKUPS_DIR", self.backups_dir)
         )
         self.runtime.enter_context(
+            patch.object(payment_service, "invoice_repository", self.invoice_repository)
+        )
+        self.runtime.enter_context(
+            patch.object(payment_service, "payment_repository", self.payment_repository)
+        )
+        self.runtime.enter_context(
+            patch.object(
+                activity_service,
+                "activity_repository",
+                self.activity_repository,
+            )
+        )
+        self.runtime.enter_context(
             patch.object(
                 payment_service,
                 "get_payment_proof_service",
                 return_value=self.attachment_service,
             )
         )
+        self._ensure_auth()
 
     def tearDown(self):
         self.runtime.close()
+        shutdown_database(self.engine)
         self.temp_dir.cleanup()
 
     def _payment_rows(self):
-        workbook = workbook_module.load_workbook_safely()
-        return read_rows(workbook[SHEET_PAYMENTS], SHEET_PAYMENTS)
+        return self.payment_repository.list_all()
 
     def _activity_rows(self):
-        workbook = workbook_module.load_workbook_safely()
-        return read_rows(workbook[SHEET_ACTIVITIES], SHEET_ACTIVITIES)
+        return self.activity_repository.list_all()
 
     @staticmethod
     def _payment_payload(payment_id=None, *, invoice_id="invoice-integration"):
         payload = {
             "invoiceId": invoice_id,
-            "amount": 1250,
+            "amount": 1180,  # Matches invoice total: 1000 + 90 CGST + 90 SGST
             "method": "upi",
             "receivedAt": "2025-06-15T10:30:00+00:00",
             "reference": "INTEGRATION-REFERENCE",
@@ -137,6 +208,7 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
             "/api/payments",
             data=form,
             files={"proof": (filename, content, "application/pdf")},
+            headers=self.auth_headers,
         )
 
     @staticmethod
@@ -181,6 +253,7 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
         response = self.client.post(
             "/api/payments",
             json=self._payment_payload(),
+            headers=self.auth_headers,
         )
 
         self.assertEqual(response.status_code, 201)
@@ -190,10 +263,10 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
         self.assertEqual(payment["clientId"], "client-integration")
         self.assertIsNone(payment["paymentProof"])
 
-        listed = self.client.get("/api/payments")
+        listed = self.client.get("/api/payments", headers=self.auth_headers)
         self.assertEqual(listed.status_code, 200)
         self.assertEqual(listed.json(), [payment])
-        fetched = self.client.get(f"/api/payments/{payment['id']}")
+        fetched = self.client.get(f"/api/payments/{payment['id']}", headers=self.auth_headers)
         self.assertEqual(fetched.status_code, 200)
         self.assertEqual(fetched.json(), payment)
 
@@ -258,10 +331,10 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
         self.assertEqual(activity.call_count, 1)
         self.assertEqual(replace.call_count, 1)
 
-        listed = self.client.get("/api/payments").json()
+        listed = self.client.get("/api/payments", headers=self.auth_headers).json()
         self.assertEqual(len(listed), 1)
         self.assertEqual(listed[0]["paymentProof"], payment["paymentProof"])
-        fetched = self.client.get(f"/api/payments/{payment_id}")
+        fetched = self.client.get(f"/api/payments/{payment_id}", headers=self.auth_headers)
         self.assertEqual(fetched.status_code, 200)
         self.assertEqual(fetched.json()["paymentProof"], payment["paymentProof"])
         self._assert_single_payment_activity(payment_id)
@@ -274,6 +347,7 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
                 "amount": 0,
                 "method": "upi",
             },
+            headers=self.auth_headers,
         )
         self.assertEqual(invalid.status_code, 422)
         self.assertIn("amount", invalid.json()["detail"]["errors"])
@@ -283,13 +357,14 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
         unknown_invoice = self.client.post(
             "/api/payments",
             json=self._payment_payload("pm-unknown-invoice", invoice_id="invoice-missing"),
+            headers=self.auth_headers,
         )
         self.assertEqual(unknown_invoice.status_code, 404)
         self.assertEqual(self._payment_rows(), [])
         self.assertEqual(self._activity_rows(), [])
 
-    def test_legacy_workbook_without_proof_headers_migrates_and_keeps_rows_readable(self):
-        workbook = workbook_module.load_workbook_safely()
+    def test_legacy_excel_payments_are_not_imported_or_modified(self):
+        workbook = load_workbook(self.workbook_path)
         append_row(
             workbook[SHEET_PAYMENTS],
             SHEET_PAYMENTS,
@@ -304,40 +379,27 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
             },
         )
         worksheet = workbook[SHEET_PAYMENTS]
-        legacy_headers = [
-            worksheet.cell(row=1, column=index).value
-            for index in range(1, worksheet.max_column - len(PAYMENT_PROOF_HEADERS) + 1)
-        ]
         worksheet.delete_cols(
             worksheet.max_column - len(PAYMENT_PROOF_HEADERS) + 1,
             len(PAYMENT_PROOF_HEADERS),
         )
         workbook.save(self.workbook_path)
+        legacy_payment_rows = read_rows(worksheet, SHEET_PAYMENTS)
+        legacy_workbook_hash = self.workbook_path.read_bytes()
 
-        migrated_get = self.client.get("/api/payments")
-        self.assertEqual(migrated_get.status_code, 200)
-        self.assertEqual(migrated_get.json()[0]["id"], "pm-legacy")
-        self.assertIsNone(migrated_get.json()[0]["paymentProof"])
-
-        reloaded = workbook_module.load_workbook_safely()
-        migrated_headers = [
-            reloaded[SHEET_PAYMENTS].cell(row=1, column=index).value
-            for index in range(1, reloaded[SHEET_PAYMENTS].max_column + 1)
-        ]
-        self.assertEqual(migrated_headers[: len(legacy_headers)], legacy_headers)
-        self.assertEqual(migrated_headers[-len(PAYMENT_PROOF_HEADERS) :], PAYMENT_PROOF_HEADERS)
-
-        posted = self.client.post(
-            "/api/payments",
-            json=self._payment_payload("pm-after-legacy"),
-        )
-        self.assertEqual(posted.status_code, 201)
-        rows = self._payment_rows()
-        self.assertEqual({row["id"] for row in rows}, {"pm-legacy", "pm-after-legacy"})
-        self.assertTrue(all(row["paymentProof"] is None for row in rows))
-        activities = self._activity_rows()
-        self.assertEqual(len(activities), 1)
-        self.assertEqual(activities[0]["paymentId"], "pm-after-legacy")
+        active_payments = self.client.get("/api/payments", headers=self.auth_headers)
+        self.assertEqual(active_payments.status_code, 200)
+        self.assertEqual(active_payments.json(), [])
+        self.assertEqual(self._payment_rows(), [])
+        self.assertEqual(self.workbook_path.read_bytes(), legacy_workbook_hash)
+        reloaded = load_workbook(self.workbook_path, read_only=True, data_only=True)
+        try:
+            self.assertEqual(
+                read_rows(reloaded[SHEET_PAYMENTS], SHEET_PAYMENTS),
+                legacy_payment_rows,
+            )
+        finally:
+            reloaded.close()
 
     def test_reference_safety_rejects_client_metadata_and_keeps_generated_reference_opaque(self):
         fabricated = self.client.post(
@@ -352,6 +414,7 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
                     "attachmentReference": "../../outside",
                 },
             },
+            headers=self.auth_headers,
         )
         self.assertEqual(fabricated.status_code, 422)
         self.assertEqual(
@@ -443,18 +506,12 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
         self._assert_single_payment_activity("pm-readback-failure")
 
     def test_metadata_enrichment_failure_after_attachment_creation_retains_payment_and_cleans_orphan(self):
-        original_save = payment_service.save_workbook
-        save_calls = []
         original_cleanup = self.attachment_service.cleanup
 
-        def fail_enrichment(workbook):
-            save_calls.append("save")
-            if len(save_calls) == 1:
-                return original_save(workbook)
-            raise WorkbookAccessError("injected workbook metadata failure")
-
         with patch.object(
-            payment_service, "save_workbook", side_effect=fail_enrichment
+            payment_service.payment_repository,
+            "update_proof",
+            side_effect=RuntimeError("injected SQLite metadata failure"),
         ), patch.object(
             self.attachment_service, "cleanup", wraps=original_cleanup
         ) as cleanup:
@@ -470,7 +527,6 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
             code="proof_storage_failed",
         )
         self.assertIsNone(payment["paymentProof"])
-        self.assertEqual(len(save_calls), 2)
         self.assertGreaterEqual(cleanup.call_count, 1)
         self.assertFalse(any(path.is_file() for path in self.attachment_root.rglob("*")))
         self._assert_single_payment_activity("pm-enrichment-failure")
@@ -488,9 +544,9 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
         original_cleanup = self.attachment_service.cleanup
 
         with patch.object(
-            payment_service,
-            "save_workbook",
-            side_effect=WorkbookAccessError("injected replacement enrichment failure"),
+            payment_service.payment_repository,
+            "update_proof",
+            side_effect=RuntimeError("injected replacement enrichment failure"),
         ), patch.object(
             self.attachment_service, "cleanup", wraps=original_cleanup
         ) as cleanup:
@@ -529,15 +585,17 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
         prior_proof = prior_payment["paymentProof"]
         prior_path = self.attachment_root / prior_proof["attachmentReference"]
         observed_prior_during_enrichment = []
-        original_save = payment_service.save_workbook
+        original_update = payment_service.payment_repository.update_proof
 
-        def observe_enrichment(workbook):
+        def observe_enrichment(payment_id, metadata):
             observed_prior_during_enrichment.append(prior_path.is_file())
-            return original_save(workbook)
+            return original_update(payment_id, metadata)
 
         response = None
         with patch.object(
-            payment_service, "save_workbook", side_effect=observe_enrichment
+            payment_service.payment_repository,
+            "update_proof",
+            side_effect=observe_enrichment,
         ):
             response = self._post_proof(
                 self._payment_payload("pm-replacement-success"),
@@ -557,7 +615,7 @@ class PaymentPersistenceIntegrationTests(unittest.TestCase):
         self.assertTrue(new_path.is_file())
         self.assertEqual(len(self._payment_rows()), 1)
         self.assertEqual(self._payment_rows()[0]["paymentProof"], new_proof)
-        fetched = self.client.get("/api/payments/pm-replacement-success")
+        fetched = self.client.get("/api/payments/pm-replacement-success", headers=self.auth_headers)
         self.assertEqual(fetched.status_code, 200)
         self.assertEqual(fetched.json()["paymentProof"], new_proof)
         self._assert_single_payment_activity("pm-replacement-success")

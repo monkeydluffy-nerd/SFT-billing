@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import ValidationError
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
+from app.auth import get_current_user
 from app.models.schemas import (
     PaymentCreate,
     PaymentProofError,
@@ -16,7 +17,7 @@ from app.models.schemas import (
 from app.services import payment_service
 from app.utils.http_errors import raise_as_http
 
-router = APIRouter(prefix="/api/payments", tags=["payments"])
+router = APIRouter(prefix="/api/payments", tags=["payments"], dependencies=[Depends(get_current_user)])
 
 # This key is deliberately private to the existing payment service boundary.
 # The service consumes the bytes and metadata after the payment row exists and

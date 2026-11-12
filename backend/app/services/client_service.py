@@ -1,13 +1,16 @@
-﻿"""Client CRUD against the Clients sheet."""
+"""Client CRUD business rules backed by SQLite.
+
+The Excel Clients sheet remains untouched as legacy data for Excel-backed
+domains; active Client API CRUD reads and writes only through the repository.
+"""
 from __future__ import annotations
 
+import re
 from typing import Any
 
-from app.excel.constants import SHEET_CLIENTS
-from app.excel.rows import append_row, delete_row, find_row_index, read_rows, write_row
-from app.excel.workbook import load_workbook_safely, save_workbook
+from app.repositories.client_repository import client_repository
 from app.utils.errors import NotFoundError, ValidationFailedError
-from app.utils.validators import is_valid_email, is_valid_gstin, new_id, now_iso
+from app.utils.validators import is_valid_email, is_valid_gstin, new_id
 
 
 def _validate(payload: dict[str, Any], partial: bool = False) -> dict[str, str]:
@@ -15,34 +18,45 @@ def _validate(payload: dict[str, Any], partial: bool = False) -> dict[str, str]:
     if not partial or "name" in payload:
         if not (payload.get("name") or "").strip():
             errors["name"] = "Client name is required."
-    if not partial or "contactName" in payload:
-        if not (payload.get("contactName") or "").strip():
-            errors["contactName"] = "Contact name is required."
-    if not partial or "email" in payload:
-        email = (payload.get("email") or "").strip()
-        if not email:
-            errors["email"] = "Email is required."
-        elif not is_valid_email(email):
+    for field in ("email", "phone", "pan"):
+        value = payload.get(field)
+        if field in payload and value is not None and not isinstance(value, str):
+            errors[field] = (
+                "Enter a valid email address."
+                if field == "email"
+                else "Must be text."
+            )
+    if isinstance(payload.get("email"), str):
+        email = payload["email"].strip()
+        if email and not is_valid_email(email):
             errors["email"] = "Enter a valid email address."
+    if isinstance(payload.get("phone"), str):
+        phone = payload["phone"].strip()
+        if not phone:
+            errors["phone"] = "Phone number is required."
+        else:
+            phone_digits = re.sub(r"\D", "", phone)
+            if len(phone_digits) != 10:
+                errors["phone"] = "Phone number must be exactly 10 digits."
     if not partial or "billingAddress" in payload:
         if not (payload.get("billingAddress") or "").strip():
             errors["billingAddress"] = "Billing address is required."
     gstin = payload.get("gstin")
-    if gstin and not is_valid_gstin(gstin):
-        errors["gstin"] = "Invalid GSTIN format."
+    if (not partial or "gstin" in payload) and gstin is not None:
+        if gstin and gstin.strip() and not is_valid_gstin(gstin):
+            errors["gstin"] = "Invalid GSTIN format."
     return errors
 
 
 def list_clients() -> list[dict[str, Any]]:
-    wb = load_workbook_safely()
-    return read_rows(wb[SHEET_CLIENTS], SHEET_CLIENTS)
+    return client_repository.list_all()
 
 
 def get_client(client_id: str) -> dict[str, Any]:
-    for row in list_clients():
-        if row["id"] == client_id:
-            return row
-    raise NotFoundError(f"Client {client_id} not found.")
+    client = client_repository.get_by_id(client_id)
+    if client is None:
+        raise NotFoundError(f"Client {client_id} not found.")
+    return client
 
 
 def create_client(payload: dict[str, Any]) -> dict[str, Any]:
@@ -50,23 +64,18 @@ def create_client(payload: dict[str, Any]) -> dict[str, Any]:
     if errors:
         raise ValidationFailedError(errors)
 
-    wb = load_workbook_safely()
-    ws = wb[SHEET_CLIENTS]
-
     row = {
         "id": payload.get("id") or new_id("cl"),
         "name": payload["name"].strip(),
-        "contactName": payload["contactName"].strip(),
-        "email": payload["email"].strip(),
-        "phone": (payload.get("phone") or "").strip() or None,
+        "contactName": (payload.get("contactName") or "").strip() or None,
+        "email": _optional_text(payload.get("email")),
+        "phone": _optional_text(payload.get("phone")),
         "billingAddress": payload["billingAddress"].strip(),
         "gstin": (payload.get("gstin") or "").strip().upper() or None,
-        "clientSince": payload.get("clientSince") or now_iso(),
+        "pan": _optional_text(payload.get("pan"), uppercase=True),
         "notes": (payload.get("notes") or "").strip() or None,
     }
-    append_row(ws, SHEET_CLIENTS, row)
-    save_workbook(wb)
-    return row
+    return client_repository.create(row)
 
 
 def update_client(client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -74,30 +83,43 @@ def update_client(client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     if errors:
         raise ValidationFailedError(errors)
 
-    wb = load_workbook_safely()
-    ws = wb[SHEET_CLIENTS]
-    row_num = find_row_index(ws, SHEET_CLIENTS, "id", client_id)
-    if row_num is None:
-        raise NotFoundError(f"Client {client_id} not found.")
-
-    current = read_rows(ws, SHEET_CLIENTS)[row_num - 2]
-    updated = dict(current)
-    for key in ("name", "contactName", "email", "phone", "billingAddress", "notes"):
-        if key in payload and payload[key] is not None:
-            updated[key] = payload[key].strip() if isinstance(payload[key], str) else payload[key]
+    changes: dict[str, Any] = {}
+    for key in ("name", "contactName", "email", "phone", "billingAddress", "notes", "pan"):
+        if key in payload:
+            value = payload[key]
+            # Skip None values for optional fields to avoid clearing them
+            if value is None and key in ("email", "phone", "pan"):
+                continue
+            if key in {"email", "phone", "pan"}:
+                changes[key] = _optional_text(
+                    value, uppercase=key == "pan"
+                )
+            elif value is not None:
+                changes[key] = (
+                    value.strip()
+                    if isinstance(value, str)
+                    else value
+                )
     if "gstin" in payload and payload["gstin"] is not None:
-        updated["gstin"] = payload["gstin"].strip().upper() or None
+        changes["gstin"] = payload["gstin"].strip().upper() or None
 
-    write_row(ws, SHEET_CLIENTS, row_num, updated)
-    save_workbook(wb)
-    return updated
+    persisted = client_repository.update(client_id, changes)
+    if persisted is None:
+        raise NotFoundError(f"Client {client_id} not found.")
+    return persisted
 
 
 def delete_client(client_id: str) -> None:
-    wb = load_workbook_safely()
-    ws = wb[SHEET_CLIENTS]
-    row_num = find_row_index(ws, SHEET_CLIENTS, "id", client_id)
-    if row_num is None:
+    if not client_repository.delete(client_id):
         raise NotFoundError(f"Client {client_id} not found.")
-    delete_row(ws, row_num)
-    save_workbook(wb)
+
+
+def _optional_text(value: Any, uppercase: bool = False) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise TypeError("Optional Client contact values must be strings or null.")
+    normalized = value.strip()
+    if uppercase:
+        normalized = normalized.upper()
+    return normalized or None

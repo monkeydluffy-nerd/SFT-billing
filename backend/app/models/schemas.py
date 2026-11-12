@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -65,12 +65,20 @@ class BusinessProfileUpdate(BaseModel):
 # ---------------------------------------------------------------------------
 class ClientBase(BaseModel):
     name: str = Field(min_length=1)
-    contactName: str = Field(min_length=1)
-    email: EmailStr
+    contactName: Optional[str] = None
+    email: Optional[EmailStr] = None
     phone: Optional[str] = None
     billingAddress: str = Field(min_length=1)
-    gstin: Optional[str] = None
+    gstin: str = Field(min_length=1)
+    pan: Optional[str] = None
     notes: Optional[str] = None
+
+    @field_validator("email", "phone", "pan", mode="before")
+    @classmethod
+    def normalize_blank_optional_contacts(cls, value: Any) -> Optional[str]:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
     @field_validator("gstin")
     @classmethod
@@ -86,7 +94,6 @@ class ClientBase(BaseModel):
 
 class ClientCreate(ClientBase):
     id: Optional[str] = None
-    clientSince: Optional[str] = None
 
 
 class ClientUpdate(BaseModel):
@@ -96,12 +103,19 @@ class ClientUpdate(BaseModel):
     phone: Optional[str] = None
     billingAddress: Optional[str] = None
     gstin: Optional[str] = None
+    pan: Optional[str] = None
     notes: Optional[str] = None
+
+    @field_validator("email", "phone", "pan", mode="before")
+    @classmethod
+    def normalize_blank_optional_contacts(cls, value: Any) -> Optional[str]:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
 
 class Client(ClientBase):
     id: str
-    clientSince: str
 
 
 # ---------------------------------------------------------------------------

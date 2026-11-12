@@ -1,4 +1,6 @@
 import { FormEvent, useId, useState } from "react";
+import { useAuthStore } from "@/hooks/useAuthStore";
+import { getApiBaseUrl } from "@/services/backendPort";
 import PinDrawing from "./PinDrawing";
 import { ForgotPasswordModal } from "./forgot-password";
 import "./login.css";
@@ -11,14 +13,14 @@ export interface LoginPageProps {
   /** App version shown in the footer, e.g. "1.0.0". */
   version: string;
   /** Called with the entered credentials. Wire it to your own auth later. */
-  onSubmit: (credentials: { username: string; password: string }) => void | Promise<void>;
+  onSubmit?: (credentials: { username: string; password: string }) => Promise<void>;
   /** Error message to show under the form (e.g. "Incorrect username or password."). */
   error?: string | null;
   /** Force the loading state; if omitted it follows the onSubmit promise. */
   loading?: boolean;
 }
 
-export default function LoginPage({ logoSrc, version, onSubmit, error, loading }: LoginPageProps) {
+export default function LoginPage({ logoSrc, version, error, loading, onSubmit }: LoginPageProps) {
   const uid = useId();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -30,6 +32,8 @@ export default function LoginPage({ logoSrc, version, onSubmit, error, loading }
   const isLoading = loading ?? busy;
   const message = error ?? localError;
 
+  const { login } = useAuthStore();
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (isLoading) return;
@@ -40,7 +44,13 @@ export default function LoginPage({ logoSrc, version, onSubmit, error, loading }
     setLocalError(null);
     setBusy(true);
     try {
-      await onSubmit({ username: username.trim(), password });
+      if (onSubmit) {
+        await onSubmit({ username: username.trim(), password });
+      } else {
+        await login(username.trim(), password);
+      }
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : "Invalid username or password.");
     } finally {
       setBusy(false);
     }
@@ -50,14 +60,32 @@ export default function LoginPage({ logoSrc, version, onSubmit, error, loading }
     setRecoveryOpen(true);
   }
 
-  // These callbacks are not connected to a real backend.
-  // Password recovery requires backend implementation (verify endpoint, reset endpoint).
-  async function handleVerify(_input: { username: string; recoveryKey: string }) {
-    return { status: "error", message: "Password recovery is not yet configured on the server." } as const;
+  async function handleVerify(input: { username: string; recoveryKey: string }) {
+    const baseUrl = await getApiBaseUrl();
+    const res = await fetch(`${baseUrl}/api/auth/forgot-password/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: input.username, recovery_key: input.recoveryKey }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      return { status: "invalid" as const, message: data.detail };
+    }
+    return { status: "verified" as const, resetToken: data.reset_token };
   }
 
-  async function handleResetPassword(_input: { resetToken: string; newPassword: string }) {
-    return { status: "error", message: "Password recovery is not yet configured on the server." } as const;
+  async function handleResetPassword(input: { resetToken: string; newPassword: string }) {
+    const baseUrl = await getApiBaseUrl();
+    const res = await fetch(`${baseUrl}/api/auth/forgot-password/reset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reset_token: input.resetToken, new_password: input.newPassword }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      return { status: "error" as const, message: data.detail };
+    }
+    return { status: "ok" as const };
   }
 
   return (

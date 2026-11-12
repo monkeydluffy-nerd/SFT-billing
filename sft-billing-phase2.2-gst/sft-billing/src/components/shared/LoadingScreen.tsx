@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Loader2, AlertTriangle, RefreshCw, Building2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { getApiBaseUrl } from "@/services/backendPort";
 
 interface LoadingScreenProps {
   onReady: () => void;
@@ -23,9 +24,10 @@ export function LoadingScreen({ onReady, onError }: LoadingScreenProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const checkBackendHealth = useCallback(async (port: number): Promise<boolean> => {
+  const checkBackendHealth = useCallback(async (): Promise<boolean> => {
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/api/health`, {
+      const baseUrl = await getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/health`, {
         method: "GET",
         signal: AbortSignal.timeout(3000),
       });
@@ -37,32 +39,6 @@ export function LoadingScreen({ onReady, onError }: LoadingScreenProps) {
     }
   }, []);
 
-  const getBackendPort = useCallback(async (): Promise<number> => {
-    // Try to get port from Tauri
-    if (typeof window !== "undefined") {
-      const tauriWindow = window as Window & { 
-        __TAURI__?: { invoke: (command: string, args?: unknown) => Promise<unknown> } 
-      };
-      if (tauriWindow.__TAURI__) {
-        try {
-          const port = await tauriWindow.__TAURI__.invoke("get_backend_port");
-          if (typeof port === "number" && port > 0 && port < 65536) {
-            return port;
-          }
-        } catch {
-          // Fall through to fallback
-        }
-      }
-    }
-    // Fallback: try common ports
-    for (let port = 8000; port <= 8010; port++) {
-      if (await checkBackendHealth(port)) {
-        return port;
-      }
-    }
-    throw new Error("Could not determine backend port");
-  }, [checkBackendHealth]);
-
   const waitForBackend = useCallback(async () => {
     setStatus("starting_backend");
     
@@ -71,11 +47,12 @@ export function LoadingScreen({ onReady, onError }: LoadingScreenProps) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
       setStatus("connecting");
-      const port = await getBackendPort();
+
+      setStatus("connecting");
       
       // Poll for backend readiness
       for (let attempt = 1; attempt <= 30; attempt++) {
-        const healthy = await checkBackendHealth(port);
+        const healthy = await checkBackendHealth();
         if (healthy) {
           setStatus("ready");
           // Small delay to show "ready" state
@@ -89,14 +66,14 @@ export function LoadingScreen({ onReady, onError }: LoadingScreenProps) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
       
-      throw new Error(`Backend not ready after 30 seconds on port ${port}`);
+      throw new Error(`Backend not ready after 30 seconds`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to connect to backend";
       setErrorMessage(message);
       setStatus("error");
       onError(message);
     }
-  }, [getBackendPort, checkBackendHealth, onReady, onError]);
+  }, [checkBackendHealth, onReady, onError]);
 
   const handleRetry = useCallback(() => {
     setErrorMessage(null);

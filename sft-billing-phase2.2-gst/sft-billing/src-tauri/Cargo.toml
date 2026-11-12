@@ -17,6 +17,10 @@ ico = "0.5"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.8.3", features = [ "shell-sidecar", "shell-open", "process-command-api", "process-relaunch", "process-exit", "fs-all", "http-all", "path-all"] }
+rusqlite = { version = "0.31", features = ["bundled", "backup"] }
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3.9", features = ["handleapi", "jobapi2", "processthreadsapi", "winnt", "winbase"] }
 
 [features]
 custom-protocol = [ "tauri/custom-protocol" ]

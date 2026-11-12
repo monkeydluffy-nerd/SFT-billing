@@ -24,16 +24,43 @@ PAYMENT_RESPONSE = {**PAYMENT_PAYLOAD}
 class PaymentRouteContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        import uuid
+        cls.unique_username = f"testuser_{uuid.uuid4().hex[:8]}"
+
         app = FastAPI()
         app.include_router(router)
+        from app.routes.auth import router as auth_router
+        app.include_router(auth_router)
         cls.client = TestClient(app)
+
+        # Set up authentication using global database
+        from app.services.auth_service import create_user, get_user_by_username
+        from app.database.session import get_db_session
+
+        db_gen = get_db_session()
+        db = next(db_gen)
+        try:
+            existing_user = get_user_by_username(db, cls.unique_username)
+            if existing_user is None:
+                create_user(db, username=cls.unique_username, password="TestPass123!", is_admin=True)
+                db.commit()
+        finally:
+            next(db_gen, None)
+            db.close()
+
+        # Login to get a session token
+        login_response = cls.client.post(
+            "/api/auth/login",
+            json={"username": cls.unique_username, "password": "TestPass123!", "remember": True}
+        )
+        cls.auth_headers = {"Authorization": f"Bearer {login_response.json()['token']}"}
 
     def test_json_payment_keeps_existing_service_boundary_and_response_shape(self):
         with patch(
             "app.routes.payments.payment_service.record_payment",
             return_value=PAYMENT_RESPONSE,
         ) as record_payment:
-            response = self.client.post("/api/payments", json=PAYMENT_PAYLOAD)
+            response = self.client.post("/api/payments", json=PAYMENT_PAYLOAD, headers=self.auth_headers)
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json(), PAYMENT_RESPONSE)
@@ -55,6 +82,7 @@ class PaymentRouteContractTests(unittest.TestCase):
                 "/api/payments",
                 data=form_fields,
                 files={"proof": ("receipt.pdf", b"proof-bytes", "application/pdf")},
+                headers=self.auth_headers,
             )
 
         self.assertEqual(response.status_code, 201)
@@ -74,7 +102,7 @@ class PaymentRouteContractTests(unittest.TestCase):
         }
 
         with patch("app.routes.payments.payment_service.record_payment") as record_payment:
-            response = self.client.post("/api/payments", json=payload)
+            response = self.client.post("/api/payments", json=payload, headers=self.auth_headers)
 
         self.assertEqual(response.status_code, 422)
         detail = response.json()["detail"]
@@ -92,6 +120,7 @@ class PaymentRouteContractTests(unittest.TestCase):
                     ("proof", ("first.pdf", b"first", "application/pdf")),
                     ("proof", ("second.pdf", b"second", "application/pdf")),
                 ],
+                headers=self.auth_headers,
             )
 
         self.assertEqual(response.status_code, 422)
@@ -129,7 +158,7 @@ class PaymentRouteContractTests(unittest.TestCase):
             "app.routes.payments.payment_service.record_payment",
             return_value={"payment": retained_payment, "proofError": proof_error},
         ):
-            response = self.client.post("/api/payments", json=PAYMENT_PAYLOAD)
+            response = self.client.post("/api/payments", json=PAYMENT_PAYLOAD, headers=self.auth_headers)
 
         self.assertEqual(response.status_code, 422)
         self.assertEqual(response.json()["detail"]["payment"], retained_payment)
@@ -139,7 +168,7 @@ class PaymentRouteContractTests(unittest.TestCase):
             "app.routes.payments.payment_service.record_payment",
             return_value={"payment": retained_payment},
         ):
-            success = self.client.post("/api/payments", json=PAYMENT_PAYLOAD)
+            success = self.client.post("/api/payments", json=PAYMENT_PAYLOAD, headers=self.auth_headers)
 
         self.assertEqual(success.status_code, 201)
         self.assertEqual(success.json(), {"payment": retained_payment})

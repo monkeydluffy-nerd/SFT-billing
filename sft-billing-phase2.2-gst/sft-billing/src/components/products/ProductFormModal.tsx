@@ -3,6 +3,7 @@ import { activeDataProvider } from "@/services";
 import type { CatalogProduct, CatalogProductInput } from "@/types";
 import { Button } from "@/components/shared/Button";
 import { Modal } from "@/components/shared/Modal";
+import { getApiBaseUrl } from "@/services/backendPort";
 
 interface ProductFormModalProps {
   open: boolean;
@@ -31,7 +32,8 @@ const EMPTY_VALUES: ProductFormValues = {
 
 async function fetchNextProductCode(): Promise<string> {
   try {
-    const response = await fetch("/api/products/next-code");
+    const baseUrl = await getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/api/products/next-code`);
     if (!response.ok) throw new Error("Failed to fetch next product code");
     const data = await response.json();
     return data.code || "";
