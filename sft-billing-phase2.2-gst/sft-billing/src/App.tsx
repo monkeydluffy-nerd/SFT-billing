@@ -102,7 +102,7 @@ export function App() {
     return (
       <LoginPage
         logoSrc="/brand/surfine-horizontal.png"
-        version="0.1.1"
+        version="1.1.0"
         onSubmit={async (credentials) => {
           const { login } = useAuthStore.getState();
           await login(credentials.username, credentials.password);

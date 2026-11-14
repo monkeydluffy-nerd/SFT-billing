@@ -221,7 +221,7 @@ export function LoadingScreen({ onReady, onError }: LoadingScreenProps) {
           </div>
         )}
 
-        <div className="absolute bottom-6 font-mono text-[11px] text-white/30">Version 0.1.1</div>
+        <div className="absolute bottom-6 font-mono text-[11px] text-white/30">Version 1.1.0</div>
       </div>
     </div>
   );
