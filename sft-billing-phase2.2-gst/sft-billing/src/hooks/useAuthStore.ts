@@ -54,6 +54,7 @@ interface AuthState {
   token: string | null;
   isAuthenticating: boolean;
   login: (username: string, password: string, remember?: boolean) => Promise<void>;
+  register: (input: { username: string; mobile: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   setAuthenticating: (authenticating: boolean) => void;
   checkAuth: () => Promise<boolean>;
@@ -112,6 +113,27 @@ export const useAuthStore = create<AuthState>()(
             token: data.token,
             isAuthenticating: false,
           });
+        } catch (error) {
+          set({ isAuthenticating: false });
+          throw error;
+        }
+      },
+
+      register: async ({ username, mobile, password }) => {
+        set({ isAuthenticating: true });
+        try {
+          const baseUrl = await getApiBaseUrl();
+          const res = await fetch(`${baseUrl}/api/auth/first-run-setup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, mobile, password }),
+          });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            const detail = Array.isArray(body.detail) ? body.detail[0]?.msg : body.detail;
+            throw new Error(detail ?? "Could not create the account.");
+          }
+          set({ isAuthenticated: true, user: body.user, token: body.token, isAuthenticating: false });
         } catch (error) {
           set({ isAuthenticating: false });
           throw error;

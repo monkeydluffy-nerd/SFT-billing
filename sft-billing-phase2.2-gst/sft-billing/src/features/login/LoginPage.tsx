@@ -64,16 +64,16 @@ export default function LoginPage({ logoSrc, version, error, loading, onSubmit }
     setRecoveryOpen(true);
   }
 
-  async function handleVerify(input: { username: string; recoveryKey: string }) {
+  async function handleVerify(input: { mobile: string }) {
     const baseUrl = await getApiBaseUrl();
-    const res = await fetch(`${baseUrl}/api/auth/forgot-password/verify`, {
+    const res = await fetch(`${baseUrl}/api/auth/forgot-password/verify-mobile`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: input.username, recovery_key: input.recoveryKey }),
+      body: JSON.stringify({ mobile: input.mobile }),
     });
     const data = await res.json();
     if (!res.ok) {
-      return { status: "invalid" as const, message: data.detail };
+      return { status: "invalid" as const, message: typeof data.detail === "string" ? data.detail : undefined };
     }
     return { status: "verified" as const, resetToken: data.reset_token };
   }
@@ -186,7 +186,6 @@ export default function LoginPage({ logoSrc, version, error, loading, onSubmit }
         onClose={() => setRecoveryOpen(false)}
         onVerify={handleVerify}
         onResetPassword={handleResetPassword}
-        defaultUsername={username}
       />
     </div>
   );

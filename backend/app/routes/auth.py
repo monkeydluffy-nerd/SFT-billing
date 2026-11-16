@@ -23,7 +23,9 @@ from app.services.auth_service import (
     invalidate_session,
     validate_reset_token,
     validate_session,
+    normalize_mobile,
     verify_credentials,
+    verify_mobile,
     verify_recovery_key,
 )
 
@@ -47,7 +49,8 @@ class LoginResponse(BaseModel):
 
 class FirstRunSetupRequest(BaseModel):
     username: str = Field(min_length=1, max_length=50)
-    password: str = Field(min_length=12, max_length=128)
+    mobile: str = Field(min_length=10, max_length=20)
+    password: str = Field(min_length=8, max_length=128)
 
 
 class FirstRunSetupResponse(BaseModel):
@@ -62,6 +65,10 @@ class ForgotPasswordVerifyRequest(BaseModel):
     recovery_key: str = Field(min_length=1)
 
 
+class ForgotPasswordMobileRequest(BaseModel):
+    mobile: str = Field(min_length=1, max_length=20)
+
+
 class ForgotPasswordVerifyResponse(BaseModel):
     reset_token: str
     expires_in: int
@@ -69,12 +76,12 @@ class ForgotPasswordVerifyResponse(BaseModel):
 
 class ForgotPasswordResetRequest(BaseModel):
     reset_token: str = Field(min_length=1)
-    new_password: str = Field(min_length=12, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(min_length=1)
-    new_password: str = Field(min_length=12, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 class UserInfo(BaseModel):
@@ -200,11 +207,18 @@ def first_run_setup(
             detail="Administrator account already exists",
         )
 
+    if normalize_mobile(request.mobile) is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Enter a valid 10-digit mobile number.",
+        )
+
     user, recovery_key = create_user(
         db,
-        username=request.username,
+        username=request.username.strip(),
         password=request.password,
         is_admin=True,
+        mobile=request.mobile,
     )
 
     session, raw_token = create_session(db, user.id, remember=True)
@@ -253,6 +267,22 @@ def forgot_password_verify(
         reset_token=raw_token,
         expires_in=expires_in,
     )
+
+
+@router.post("/forgot-password/verify-mobile", response_model=ForgotPasswordVerifyResponse)
+def forgot_password_verify_mobile(
+    request: ForgotPasswordMobileRequest,
+    db: Session = Depends(get_db_session),
+):
+    """Match the registered mobile number and issue a password reset token."""
+    user = verify_mobile(db, request.mobile)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This mobile number is not registered.",
+        )
+    _, raw_token = create_reset_token(db, user.id)
+    return ForgotPasswordVerifyResponse(reset_token=raw_token, expires_in=3600)
 
 
 @router.post("/forgot-password/reset")

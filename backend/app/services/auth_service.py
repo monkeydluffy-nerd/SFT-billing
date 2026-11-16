@@ -134,11 +134,49 @@ def get_user_by_username(db: Session, username: str) -> Optional[User]:
     ).scalar_one_or_none()
 
 
+def normalize_mobile(value: str) -> Optional[str]:
+    """Return a 10-digit mobile number (country code and separators ignored), or None."""
+    digits = "".join(ch for ch in value if ch.isdigit())
+    if len(digits) > 10 and digits.startswith(("91", "091")):
+        digits = digits[-10:]
+    return digits if len(digits) == 10 else None
+
+
+MOBILE_RESET_KEY = "mobile-reset"
+MAX_MOBILE_RESET_ATTEMPTS = 5
+
+
+def verify_mobile(db: Session, mobile: str) -> Optional[User]:
+    """Match a mobile number to the account holder. Rate-limited across all attempts."""
+    since = (_now_utc() - timedelta(minutes=RECOVERY_ATTEMPT_WINDOW_MINUTES)).isoformat(timespec="seconds")
+    recent = db.execute(
+        select(RecoveryAttempt).where(
+            RecoveryAttempt.username == MOBILE_RESET_KEY,
+            RecoveryAttempt.created_at > since,
+        )
+    ).scalars().all()
+    if len(recent) >= MAX_MOBILE_RESET_ATTEMPTS:
+        return None
+
+    number = normalize_mobile(mobile)
+    user = None
+    if number:
+        user = db.execute(select(User).where(User.mobile == number)).scalars().first()
+    if user is None:
+        db.add(RecoveryAttempt(id=str(uuid4()), username=MOBILE_RESET_KEY, created_at=_now_iso()))
+        db.commit()  # persist the failed attempt even though the request will error out
+        return None
+
+    db.execute(delete(RecoveryAttempt).where(RecoveryAttempt.username == MOBILE_RESET_KEY))
+    return user
+
+
 def create_user(
     db: Session,
     username: str,
     password: str,
     is_admin: bool = True,
+    mobile: Optional[str] = None,
 ) -> tuple[User, str]:
     """Create a new user with password and recovery key.
 
@@ -151,6 +189,7 @@ def create_user(
         username=username,
         password_hash=_hash_password(password),
         recovery_key_hash=_hash_token(recovery_key),
+        mobile=normalize_mobile(mobile) if mobile else None,
         is_admin=is_admin,
         created_at=_now_iso(),
     )

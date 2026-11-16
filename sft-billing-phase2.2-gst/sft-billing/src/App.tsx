@@ -14,6 +14,8 @@ import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import LoginPage from "@/features/login/LoginPage";
+import SignUpPage from "@/features/login/SignUpPage";
+import { getApiBaseUrl } from "@/services/backendPort";
 import "@/features/login/login.css";
 
 /**
@@ -30,6 +32,7 @@ export function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const checkAuth = useAuthStore((s) => s.checkAuth);
   const theme = useWorkspaceStore((s) => s.theme);
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
 
   // Keep the document root in sync with the theme so the login screen,
   // loading screen, and portals all follow the same light/dark setting.
@@ -55,6 +58,23 @@ export function App() {
     });
     return () => { mounted = false; };
   }, [checkAuth]);
+
+  // First launch on a new install: no account exists yet, so show sign-up instead of login.
+  useEffect(() => {
+    if (!appReady || isAuthenticated) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const base = await getApiBaseUrl();
+        const res = await fetch(`${base}/api/auth/first-run-status`);
+        const body = await res.json();
+        if (!cancelled) setNeedsSetup(Boolean(body.needs_setup));
+      } catch {
+        if (!cancelled) setNeedsSetup(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [appReady, isAuthenticated]);
 
   // Show loading screen until backend is ready
   if (!appReady) {
@@ -97,8 +117,10 @@ export function App() {
     );
   }
 
-  // Show login page if not authenticated
+  // Show sign-up (first launch) or login if not authenticated
   if (!isAuthenticated) {
+    if (needsSetup === null) return null;
+    if (needsSetup) return <SignUpPage logoSrc="/brand/surfine-horizontal.png" version="1.1.0" />;
     return (
       <LoginPage
         logoSrc="/brand/surfine-horizontal.png"

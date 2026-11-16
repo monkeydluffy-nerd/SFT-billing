@@ -38,6 +38,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String, nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     recovery_key_hash: Mapped[str | None] = mapped_column("recoveryKeyHash", String)
+    mobile: Mapped[str | None] = mapped_column("mobile", String)
     is_admin: Mapped[bool] = mapped_column("isAdmin", Boolean, nullable=False, default=False)
     created_at: Mapped[str] = mapped_column("createdAt", String, nullable=False)
     last_login_at: Mapped[str | None] = mapped_column("lastLoginAt", String)
