@@ -37,7 +37,7 @@ const METHOD_OPTIONS: { value: PaymentMethod; label: string; icon: React.ReactNo
 ];
 
 const inputClass =
-  "h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-border-strong disabled:cursor-not-allowed disabled:bg-canvas disabled:text-ink-muted";
+  "h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent focus:ring-4 focus:ring-accent/15 disabled:cursor-not-allowed disabled:bg-canvas disabled:text-ink-muted";
 const errorInputClass = "border-overdue";
 const labelClass = "mb-1.5 block text-xs font-medium text-ink-muted";
 const errorTextClass = "mt-1 text-xs text-overdue";
@@ -300,7 +300,7 @@ export function RecordPaymentSidePanel({
           {currentPayment?.paymentProof && (
             <div
               data-testid="current-payment-proof"
-              className="flex items-center justify-between rounded-md border border-border bg-canvas px-3 py-2 text-xs"
+              className="flex items-center justify-between rounded-lg border border-border bg-canvas px-3 py-2 text-xs"
             >
               <span className="text-ink-muted">Current proof</span>
               <span className="max-w-[13rem] truncate font-medium text-ink" title={currentPayment.paymentProof.fileName}>

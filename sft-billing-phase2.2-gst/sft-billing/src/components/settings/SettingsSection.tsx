@@ -10,9 +10,9 @@ interface SettingsSectionProps {
 }
 
 /**
- * One collapsible-feeling but always-visible settings section - visually
- * consistent with the rest of the app's card language (border, radius,
- * spacing from tokens.css) rather than a generic settings-form look.
+ * One settings row: title and description on the left, the fields on the
+ * right. Rows are full width and separated by hairlines, so section heights
+ * never fight each other.
  */
 export function SettingsSection({ icon: Icon, title, description, children }: SettingsSectionProps) {
   return (
@@ -20,18 +20,18 @@ export function SettingsSection({ icon: Icon, title, description, children }: Se
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="rounded-lg border border-border bg-surface"
+      className="grid gap-5 py-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10"
     >
-      <div className="flex items-start gap-3 border-b border-border px-5 py-4">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent">
-          <Icon size={15} aria-hidden />
+      <div className="flex items-start gap-3.5 lg:block">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent lg:mb-3">
+          <Icon size={16} aria-hidden />
         </div>
         <div>
-          <p className="font-display text-base text-ink">{title}</p>
-          <p className="mt-0.5 text-xs text-ink-muted">{description}</p>
+          <p className="text-sm font-semibold text-ink">{title}</p>
+          <p className="mt-1 text-xs leading-relaxed text-ink-muted">{description}</p>
         </div>
       </div>
-      <div className="px-5 py-5">{children}</div>
+      <div className="min-w-0 max-w-4xl rounded-xl border border-border bg-surface p-6">{children}</div>
     </motion.section>
   );
 }

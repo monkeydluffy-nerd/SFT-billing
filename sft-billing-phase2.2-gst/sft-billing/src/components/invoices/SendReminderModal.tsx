@@ -105,7 +105,7 @@ export function SendReminderModal({ open, onClose, invoice, onSent }: SendRemind
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         rows={4}
-        className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-border-strong"
+        className="w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-4 focus:ring-accent/15"
       />
       <p>
         Review and edit the message before continuing. No email is actually sent automatically; Gmail opens for your review, and the generated invoice file is downloaded for manual attachment.

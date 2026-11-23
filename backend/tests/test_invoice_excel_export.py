@@ -212,6 +212,7 @@ class InvoiceExcelExportTests(unittest.TestCase):
 
     def test_pdf_renderer_converts_the_rendered_excel_template(self):
         with (
+            patch.dict("os.environ", {"SFT_PDF_ENGINE": "excel"}),
             patch(
                 "app.services.invoice_excel_export_service.render_invoice_excel",
                 return_value=b"rendered-workbook",
@@ -231,6 +232,14 @@ class InvoiceExcelExportTests(unittest.TestCase):
         )
         convert.assert_called_once_with(b"rendered-workbook")
         self.assertEqual(result, b"%PDF-template")
+
+    def test_default_pdf_engine_draws_the_excel_sheet_without_office(self):
+        workbook = render_invoice_excel(self.invoice, self.client, self.business)
+        with patch("app.services.invoice_excel_export_service._convert_excel_template_to_pdf") as convert:
+            pdf = render_invoice_pdf(self.invoice, self.client, self.business)
+        convert.assert_not_called()
+        self.assertTrue(pdf.startswith(b"%PDF"))
+        self.assertTrue(workbook)
 
     def test_pdf_conversion_exports_only_the_original_template_sheet(self):
         pythoncom = ModuleType("pythoncom")

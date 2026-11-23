@@ -43,7 +43,7 @@ async function fetchNextProductCode(): Promise<string> {
 }
 
 const inputClass =
-  "h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-border-strong";
+  "h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent focus:ring-4 focus:ring-accent/15";
 const labelClass = "mb-1.5 block text-xs font-medium text-ink-muted";
 const errorTextClass = "mt-1 text-xs text-overdue";
 

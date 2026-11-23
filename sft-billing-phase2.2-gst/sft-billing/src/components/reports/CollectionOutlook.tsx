@@ -171,7 +171,7 @@ export function CollectionOutlook({ invoices, payments, clients, asOf }: Collect
       {overdueItems.length > 0 && (
         <section className="space-y-2">
           <p className="text-xs font-medium text-overdue">Overdue ({overdueItems.length})</p>
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="overflow-hidden rounded-xl border border-border bg-surface">
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface">
@@ -208,7 +208,7 @@ export function CollectionOutlook({ invoices, payments, clients, asOf }: Collect
       {dueSoonItems.length > 0 && (
         <section className="space-y-2">
           <p className="text-xs font-medium text-caution">Due within 7 days ({dueSoonItems.length})</p>
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="overflow-hidden rounded-xl border border-border bg-surface">
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface">
@@ -245,7 +245,7 @@ export function CollectionOutlook({ invoices, payments, clients, asOf }: Collect
       {pendingItems.length > 0 && (
         <section className="space-y-2">
           <p className="text-xs font-medium text-ink-muted">Due later ({pendingItems.length})</p>
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="overflow-hidden rounded-xl border border-border bg-surface">
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface">

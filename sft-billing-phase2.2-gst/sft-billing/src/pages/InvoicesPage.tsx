@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Inbox, AlertTriangle } from "lucide-react";
+import { Stat, StatGroup } from "@/components/ui/kit";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { InvoiceFilterBar } from "@/components/invoices/InvoiceFilterBar";
-import { InvoiceRow } from "@/components/invoices/InvoiceRow";
+import { InvoiceRow, INVOICE_GRID } from "@/components/invoices/InvoiceRow";
 import { BulkActionBar } from "@/components/invoices/BulkActionBar";
 import { SendReminderModal } from "@/components/invoices/SendReminderModal";
 import { SendInvoiceModal } from "@/components/invoices/SendInvoiceModal";
@@ -217,7 +218,7 @@ export function InvoicesPage() {
     return (
       <div>
         <PageHeader title="Invoices" subtitle="Every invoice, in one place" />
-        <div className="px-10 py-10">
+        <div className="px-6 lg:px-8 py-10">
           <EmptyState icon={AlertTriangle} title="Couldn't load invoices" description={error.message} />
         </div>
       </div>
@@ -233,7 +234,7 @@ export function InvoicesPage() {
           <button
             type="button"
             onClick={() => openCreateInvoice()}
-            className="flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-medium text-accent-ink transition-opacity duration-micro hover:opacity-90"
+            className="flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-sm font-medium text-accent-ink transition-opacity duration-micro hover:opacity-90"
           >
             <Plus size={15} /> New invoice
           </button>
@@ -241,40 +242,31 @@ export function InvoicesPage() {
       />
 
       {/* Summary Strip */}
-      <div className="mb-6 px-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" role="region" aria-label="Invoice summary">
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-card hover:shadow-float transition-shadow duration-micro">
-          <div className="text-2xl font-bold text-ink font-tabular">{formatCurrency(globalRollup.totalBilled)}</div>
-          <div className="mt-1 text-sm text-ink-muted">Total invoiced</div>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-card hover:shadow-float transition-shadow duration-micro">
-          <div className="text-2xl font-bold text-success font-tabular">{formatCurrency(globalRollup.totalReceived)}</div>
-          <div className="mt-1 text-sm text-ink-muted">Received</div>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-card hover:shadow-float transition-shadow duration-micro">
-          <div className="text-2xl font-bold text-pending font-tabular">{formatCurrency(globalRollup.totalOutstanding)}</div>
-          <div className="mt-1 text-sm text-ink-muted">Outstanding</div>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-card hover:shadow-float transition-shadow duration-micro relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-overdue/5 to-transparent" aria-hidden="true" />
-          <div className="relative text-2xl font-bold text-overdue font-tabular">{formatCurrency(globalRollup.totalOverdue)}</div>
-          <div className="mt-1 text-sm text-ink-muted">Overdue</div>
-        </div>
+      <div className="mb-6 px-6 lg:px-8" role="region" aria-label="Invoice summary">
+        <StatGroup className="md:[--cols:4]">
+          <Stat label="Total invoiced" tone="accent" value={globalRollup.totalBilled} format={(n) => formatCurrency(n)} />
+          <Stat label="Received" tone="success" value={globalRollup.totalReceived} format={(n) => formatCurrency(n)} delay={0.06} />
+          <Stat label="Outstanding" tone="pending" value={globalRollup.totalOutstanding} format={(n) => formatCurrency(n)} delay={0.12} />
+          <Stat label="Overdue" tone="overdue" value={globalRollup.totalOverdue} format={(n) => formatCurrency(n)} delay={0.18} />
+        </StatGroup>
       </div>
 
-      <div className="flex-1 overflow-auto px-10 pb-20">
+      <div className="flex-1 overflow-auto px-6 lg:px-8 pb-20">
+        <div className="mb-5">
         <InvoiceFilterBar
-          query={query}
-          onQueryChange={setQuery}
-          statusFilter={statusFilter}
-          onStatusChange={setStatusFilter}
-          clientFilter={clientFilter}
-          onClientChange={setClientFilter}
-          clients={clients}
-          invoices={invoices}
-          payments={payments}
-          dateRange={dateRange}
-          onDateRangeChange={setDateRange}
-        />
+            query={query}
+            onQueryChange={setQuery}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+            clientFilter={clientFilter}
+            onClientChange={setClientFilter}
+            clients={clients}
+            invoices={invoices}
+            payments={payments}
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+          />
+        </div>
 
         <BulkActionBar
           count={selected.size}
@@ -305,7 +297,7 @@ export function InvoicesPage() {
                 <button
                   type="button"
                   onClick={() => openCreateInvoice()}
-                  className="flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-medium text-accent-ink transition-opacity duration-micro hover:opacity-90"
+                  className="flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-sm font-medium text-accent-ink transition-opacity duration-micro hover:opacity-90"
                 >
                   <Plus size={14} /> New invoice
                 </button>
@@ -313,19 +305,25 @@ export function InvoicesPage() {
             }
           />
         ) : (
-          <div className="space-y-4">
+          <div className="overflow-clip rounded-xl border border-border bg-surface">
+            {/* One column header for the whole table */}
+            <div
+              className="sticky top-14 z-10 grid gap-3 border-b border-border bg-surface px-5 py-3"
+              style={{ gridTemplateColumns: INVOICE_GRID }}
+            >
+              <span aria-hidden="true" />
+              <span className="text-[11px] font-medium uppercase tracking-wider text-ink-faint">Invoice</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-ink-faint">Client</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-ink-faint">Date</span>
+              <span className="text-right text-[11px] font-medium uppercase tracking-wider text-ink-faint">Amount</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-ink-faint">Status</span>
+              <span aria-hidden="true" />
+            </div>
             {groupedInvoices.map(({ month, invoices: monthInvoices }) => (
-              <div key={month} className="rounded-lg border border-border bg-surface overflow-hidden shadow-card">
-                {/* Sticky Month Header */}
-                <div className="sticky top-0 z-10 grid gap-3 px-4 py-2.5 bg-canvas/80 border-b border-border backdrop-blur-sm supports-[backdrop-filter]:bg-canvas/80"
-                  style={{ gridTemplateColumns: "24px 110px 1fr 120px 130px 170px 40px" }}>
-                  <span aria-hidden="true" />
-                  <span className="text-xs font-medium text-ink-faint uppercase tracking-wider font-tabular">Invoice</span>
-                  <span className="text-xs font-medium text-ink-faint uppercase tracking-wider">Client</span>
-                  <span className="text-xs font-medium text-ink-faint uppercase tracking-wider">Date</span>
-                  <span className="text-xs font-medium text-ink-faint uppercase tracking-wider text-right">Amount</span>
-                  <span className="text-xs font-medium text-ink-faint uppercase tracking-wider">Status</span>
-                  <span aria-hidden="true" />
+              <div key={month}>
+                <div className="flex items-center justify-between border-b border-border bg-canvas/70 px-5 py-2 text-xs font-medium text-ink-muted">
+                  <span>{month}</span>
+                  <span className="font-tabular text-ink-faint">{monthInvoices.length} invoice{monthInvoices.length === 1 ? "" : "s"}</span>
                 </div>
 
                 {/* Table Rows */}

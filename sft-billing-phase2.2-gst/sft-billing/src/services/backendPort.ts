@@ -46,6 +46,13 @@ export async function getBackendPort(): Promise<number> {
         }
 
         if (isProductionBuild) {
+          // Installed desktop build: the backend serves this UI, so it is same-origin.
+          const sameOriginPort = parseInt(window.location.port, 10);
+          if (window.location.hostname === '127.0.0.1' && sameOriginPort > 0 && sameOriginPort < 65536) {
+            cachedPort = sameOriginPort;
+            isInitialized = true;
+            return sameOriginPort;
+          }
           throw new Error('Tauri backend port command is unavailable in the production app.');
         }
 

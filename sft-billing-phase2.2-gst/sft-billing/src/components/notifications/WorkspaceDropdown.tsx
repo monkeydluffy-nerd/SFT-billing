@@ -151,7 +151,7 @@ export function WorkspaceDropdown({ businessName, monogram }: WorkspaceDropdownP
             <button
               type="button"
               onClick={() => setLogoutOpen(false)}
-              className="flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-ink-muted transition-colors duration-micro hover:border-border-strong hover:text-ink"
+              className="flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-ink-muted transition-colors duration-micro hover:border-border-strong hover:text-ink"
             >
               Cancel
             </button>

@@ -19,7 +19,7 @@ interface InventoryDetailsModalProps {
 }
 
 const inputClass =
-  "h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-border-strong";
+  "h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent focus:ring-4 focus:ring-accent/15";
 const labelClass = "mb-1.5 block text-xs font-medium text-ink-muted";
 
 function formatQuantity(value: number, unit: string): string {
@@ -189,7 +189,7 @@ export function InventoryDetailsModal({
         </div>
       )}
 
-      <div className="mb-5 rounded-md border border-border bg-canvas px-4 py-3">
+      <div className="mb-5 rounded-lg border border-border bg-canvas px-4 py-3">
         <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">Stock on hand</p>
         <p className="mt-1 font-display text-2xl text-ink">
           {loading ? "Loading…" : stock?.stockOnHand === null ? "Not initialized" : stock ? formatQuantity(stock.stockOnHand, stock.unit) : "—"}
@@ -197,7 +197,7 @@ export function InventoryDetailsModal({
       </div>
 
       {product.isActive && stock && (
-        <form onSubmit={handleSubmit} className="mb-6 grid grid-cols-1 items-end gap-3 rounded-md border border-border p-3 sm:grid-cols-[10rem_1fr_1fr_auto]">
+        <form onSubmit={handleSubmit} className="mb-6 grid grid-cols-1 items-end gap-3 rounded-lg border border-border p-3 sm:grid-cols-[10rem_1fr_1fr_auto]">
           <div>
             <label className={labelClass} htmlFor="inventory-movement-type">Movement</label>
             <select

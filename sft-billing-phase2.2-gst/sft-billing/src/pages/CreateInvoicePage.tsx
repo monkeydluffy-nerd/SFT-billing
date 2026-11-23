@@ -19,6 +19,7 @@ import { computeInvoiceTotals, suggestRoundOff } from "@/lib/invoiceMath";
 import { validateInvoiceDraft, isDraftReadyToSend } from "@/lib/invoiceValidation";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { getClientName } from "@/lib/clientLookup";
+import { cn } from "@/lib/cn";
 import type { Invoice, InvoiceLineItem } from "@/types";
 
 export function CreateInvoicePage() {
@@ -51,6 +52,9 @@ export function CreateInvoicePage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [itemsTouched, setItemsTouched] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const reservationRequested = useRef(false);
 
   const isLoading = invoicesLoading || clientsLoading || businessLoading;
 
@@ -139,6 +143,29 @@ export function CreateInvoicePage() {
     }
   }
 
+  // Every edit goes through here so a brand-new invoice (which only has a
+  // candidate, not explicit draft state) becomes a real draft on first touch.
+  function updateDraft(patch: Partial<Invoice>) {
+    markDraftStarted();
+    const base = draft ?? draftCandidate.current ?? currentDraft;
+    // First edit of a brand-new invoice: reserve a real invoice number with
+    // the backend so saving later doesn't collide with a provisional one.
+    if (!draft && base && !reservationRequested.current) {
+      reservationRequested.current = true;
+      activeDataProvider
+        .reserveInvoiceNumber(base.id)
+        .then((number) => setDraft((prev) => (prev ? { ...prev, number } : prev)))
+        .catch((error: unknown) => {
+          reservationRequested.current = false;
+          setSaveError(error instanceof Error ? error.message : "Couldn't reserve an invoice number.");
+        });
+    }
+    setDraft((prev) => {
+      const current = prev ?? base;
+      return current ? { ...current, ...patch } : current;
+    });
+  }
+
   const totals = useMemo(() => (currentDraft ? computeInvoiceTotals(currentDraft) : null), [currentDraft]);
   const validation = useMemo(() => (currentDraft ? validateInvoiceDraft(currentDraft) : null), [currentDraft]);
   const client = clients?.find((c) => c.id === currentDraft?.clientId);
@@ -175,7 +202,7 @@ export function CreateInvoicePage() {
     return (
       <div>
         <PageHeader title="New Invoice" subtitle="Invoice setup needs attention" />
-        <div role="alert" className="px-10 py-8">
+        <div role="alert" className="px-6 lg:px-8 py-8">
           <EmptyState
             icon={AlertTriangle}
             title="Couldn't prepare a new invoice"
@@ -185,7 +212,7 @@ export function CreateInvoicePage() {
                 type="button"
                 onClick={retryInitialization}
                 disabled={invoicesLoading || clientsLoading || businessLoading}
-                className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-ink transition-colors duration-micro hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-ink transition-colors duration-micro hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Try again
               </button>
@@ -236,8 +263,9 @@ export function CreateInvoicePage() {
         // Clear the number so user can try again
         setDraft((prev) => prev ? { ...prev, number: "" } : prev);
         draftStarted.current = false;
+        reservationRequested.current = false;
       }
-      throw error;
+      setSaveError(error instanceof Error ? error.message : "Couldn't save the invoice. Please try again.");
     }
   }
 
@@ -274,72 +302,49 @@ export function CreateInvoicePage() {
         await activeDataProvider.releaseReservation(draft.id);
         setDraft((prev) => prev ? { ...prev, number: "" } : prev);
         draftStarted.current = false;
+        reservationRequested.current = false;
       }
-      throw error;
+      setSaveError(error instanceof Error ? error.message : "Couldn't bill the invoice. Please try again.");
     }
   }
 
   // Wrapper handlers that mark draft as started when user interacts
   function handleClientSelect(clientId: string) {
-    if (draft) {
-      markDraftStarted();
-      setDraft((prev) => prev ? { ...prev, clientId } : prev);
-    }
+    updateDraft({ clientId });
   }
 
   function handleItemsChange(items: InvoiceLineItem[]) {
-    if (draft) {
-      markDraftStarted();
-      setDraft((prev) => prev ? { ...prev, items } : prev);
-    }
+    setItemsTouched(true);
+    updateDraft({ items });
   }
 
   function handleDiscountChange(discount: number) {
-    if (draft) {
-      markDraftStarted();
-      setDraft((prev) => prev ? { ...prev, discount } : prev);
-    }
+    updateDraft({ discount });
   }
 
   function handleRoundOffChange(roundOff: number) {
-    if (draft) {
-      markDraftStarted();
-      setDraft((prev) => prev ? { ...prev, roundOff } : prev);
-    }
+    updateDraft({ roundOff });
   }
 
   function handleSupplierCodeChange(supplierCode: string) {
-    if (draft) {
-      markDraftStarted();
-      setDraft((prev) => prev ? { ...prev, supplierCode } : prev);
-    }
+    updateDraft({ supplierCode });
   }
 
   function handlePoNumberChange(poNumber: string) {
-    if (draft) {
-      markDraftStarted();
-      setDraft((prev) => prev ? { ...prev, poNumber } : prev);
-    }
+    updateDraft({ poNumber });
   }
 
   function handlePoDateChange(poDate: string | undefined) {
-    if (draft) {
-      markDraftStarted();
-      setDraft((prev) => prev ? { ...prev, poDate } : prev);
-    }
+    updateDraft({ poDate });
   }
 
   function handleTransporterChange(transporter: string) {
-    if (draft) {
-      markDraftStarted();
-      setDraft((prev) => prev ? { ...prev, transporter } : prev);
-    }
+    updateDraft({ transporter });
   }
 
   function handleRoundOffClick() {
-    if (!draft || !totals) return;
-    markDraftStarted();
-    setDraft((prev) => prev ? { ...prev, roundOff: suggestRoundOff(totals.rawTotal) } : prev);
+    if (!totals) return;
+    updateDraft({ roundOff: suggestRoundOff(totals.rawTotal) });
   }
 
   async function handleCreateClient(input: { name: string; email: string | null; contactName?: string; phone: string | null; billingAddress: string; gstin: string; pan: string | null }) {
@@ -358,6 +363,16 @@ export function CreateInvoicePage() {
     return id;
   }
 
+  const numberInput =
+    "font-tabular h-10 w-full rounded-lg border border-border-strong bg-canvas px-3 text-sm text-ink outline-none transition focus:border-accent focus:bg-surface focus:ring-4 focus:ring-accent/15";
+  const textInput =
+    "h-10 w-full rounded-lg border border-border-strong bg-canvas px-3 text-sm text-ink outline-none transition placeholder:text-ink-faint focus:border-accent focus:bg-surface focus:ring-4 focus:ring-accent/15";
+  const labelClass = "mb-1.5 block text-xs font-semibold text-ink-muted";
+  const showErrors = itemsTouched;
+  const hasClient = Boolean(currentDraft.clientId);
+  const hasItems = !validation?.items;
+  const itemsValid = hasItems && Object.values(validation?.itemErrors ?? {}).every((e) => !e);
+
   return (
     <div className="min-h-full">
       <div className="print:hidden">
@@ -368,161 +383,210 @@ export function CreateInvoicePage() {
             <button
               type="button"
               onClick={closeCreateInvoice}
-              className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-sm text-ink-muted transition-colors duration-micro hover:border-border-strong hover:text-ink"
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-ink-muted transition-colors duration-micro hover:border-border-strong hover:text-ink"
             >
-              <ArrowLeft size={12} /> Back
+              <ArrowLeft size={14} /> Back
             </button>
           }
         />
       </div>
 
-      <div className="invoice-create-layout px-3 py-3">
-        <div className="min-w-0 space-y-3 print:hidden">
-          {currentDraft ? (
-            <div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-ink-muted">Client</label>
+      <div className="invoice-create-layout mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-8">
+        {currentDraft ? (
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="min-w-0 space-y-5 print:hidden">
+              <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[11px] text-accent-ink">1</span>
+                  Bill to
+                </h2>
+                <label className={labelClass}>Client</label>
                 <ClientCombobox
                   clients={clients ?? []}
                   value={currentDraft.clientId}
                   onSelect={handleClientSelect}
                   onCreateClient={handleCreateClient}
                 />
-                {validation?.clientId && <p className="mt-1 text-xs text-overdue">{validation.clientId}</p>}
-              </div>
+                {showErrors && validation?.clientId && <p className="mt-1.5 text-xs font-medium text-overdue">{validation.clientId}</p>}
+              </section>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-ink-muted">Line items</label>
+              <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[11px] text-accent-ink">2</span>
+                  Line items
+                </h2>
+                <label className="sr-only">Line items</label>
                 <LineItemEditor
                   items={currentDraft.items}
                   products={products ?? []}
                   onChange={handleItemsChange}
-                  errors={validation?.itemErrors ?? {}}
+                  errors={showErrors ? (validation?.itemErrors ?? {}) : {}}
                 />
-                {validation?.items && <p className="mt-2 text-xs text-overdue">{validation.items}</p>}
-              </div>
+                {showErrors && validation?.items && <p className="mt-2 text-xs font-medium text-overdue">{validation.items}</p>}
+              </section>
 
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-ink-muted">CGST (%)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.5}
-                    value={Math.round(currentDraft.gst.cgstRate * 1000) / 10}
-                    onChange={(e) => setDraft({ ...currentDraft, gst: { ...currentDraft.gst, cgstRate: Number(e.target.value) / 100 } })}
-                    className="font-tabular h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-ink outline-none focus:border-border-strong"
-                  />
+              <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
+                <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[11px] text-accent-ink">3</span>
+                  Tax &amp; adjustments
+                </h2>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <div>
+                    <label className={labelClass}>CGST (%)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.5}
+                      value={Math.round(currentDraft.gst.cgstRate * 1000) / 10}
+                      onChange={(e) => updateDraft({ gst: { ...currentDraft.gst, cgstRate: Number(e.target.value) / 100 } })}
+                      className={numberInput}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>SGST (%)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.5}
+                      value={Math.round(currentDraft.gst.sgstRate * 1000) / 10}
+                      onChange={(e) => updateDraft({ gst: { ...currentDraft.gst, sgstRate: Number(e.target.value) / 100 } })}
+                      className={numberInput}
+                    />
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className={labelClass}>Discount (flat)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={currentDraft.discount}
+                      onChange={(e) => handleDiscountChange(Number(e.target.value))}
+                      className={numberInput}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-ink-muted">SGST (%)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.5}
-                    value={Math.round(currentDraft.gst.sgstRate * 1000) / 10}
-                    onChange={(e) => setDraft({ ...currentDraft, gst: { ...currentDraft.gst, sgstRate: Number(e.target.value) / 100 } })}
-                    className="font-tabular h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-ink outline-none focus:border-border-strong"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-ink-muted">Discount (flat)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={currentDraft.discount}
-                    onChange={(e) => handleDiscountChange(Number(e.target.value))}
-                    className="font-tabular h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-ink outline-none focus:border-border-strong"
-                  />
-                </div>
-              </div>
 
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <label className="mb-1.5 block text-xs font-medium text-ink-muted">Round off</label>
-                  <input
-                    type="number"
-                    step={0.01}
-                    value={currentDraft.roundOff}
-                    onChange={(e) => handleRoundOffChange(Number(e.target.value))}
-                    className="font-tabular h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-ink outline-none focus:border-border-strong"
-                  />
+                <div className="mt-3 flex items-end gap-3">
+                  <div className="flex-1">
+                    <label className={labelClass}>Round off</label>
+                    <input
+                      type="number"
+                      step={0.01}
+                      value={currentDraft.roundOff}
+                      onChange={(e) => handleRoundOffChange(Number(e.target.value))}
+                      className={numberInput}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRoundOffClick}
+                    className="h-10 shrink-0 rounded-lg border border-border-strong px-3 text-xs font-semibold text-ink-muted transition-colors duration-micro hover:border-accent hover:text-accent"
+                  >
+                    Round to nearest ₹
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleRoundOffClick}
-                  className="h-10 shrink-0 rounded-md border border-border px-3 text-xs font-medium text-ink-muted transition-colors duration-micro hover:border-border-strong hover:text-ink"
-                >
-                  Round to nearest ₹
-                </button>
-              </div>
+              </section>
 
-              <div>
+              <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
                 {!orderDetailsOpen ? (
                   <button
                     type="button"
                     onClick={() => { markDraftStarted(); setOrderDetailsOpen(true); }}
-                    className="flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-ink"
+                    className="flex items-center gap-2 text-sm font-semibold text-ink-muted transition-colors hover:text-accent"
                   >
-                    <ChevronDown size={14} /> Add order / delivery details
+                    <ChevronDown size={15} /> Add order / delivery details
                   </button>
                 ) : (
                   <div>
-                    <p className="mb-2 text-xs font-medium text-ink-muted">Order / delivery details</p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <p className="mb-3 text-sm font-semibold text-ink">Order / delivery details</p>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <input
                         value={currentDraft.supplierCode ?? ""}
                         onChange={(e) => handleSupplierCodeChange(e.target.value)}
                         placeholder="Supplier code"
-                        className="h-9 rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-border-strong"
+                        className={textInput}
                       />
                       <input
                         value={currentDraft.transporter ?? ""}
                         onChange={(e) => handleTransporterChange(e.target.value)}
                         placeholder="Transporter"
-                        className="h-9 rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-border-strong"
+                        className={textInput}
                       />
                       <input
                         value={currentDraft.poNumber ?? ""}
                         onChange={(e) => handlePoNumberChange(e.target.value)}
                         placeholder="P.O. No."
-                        className="h-9 rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-border-strong"
+                        className={textInput}
                       />
                       <input
                         type="date"
                         value={currentDraft.poDate ? currentDraft.poDate.slice(0, 10) : ""}
                         onChange={(e) => handlePoDateChange(e.target.value ? new Date(e.target.value).toISOString() : undefined)}
-                        className="font-tabular h-9 rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none focus:border-border-strong"
+                        className={numberInput}
                       />
                     </div>
                   </div>
                 )}
-              </div>
+              </section>
+            </div>
 
-              {/* Keep invoice actions in the page flow so every control remains reachable while scrolling. */}
-              <div className="print:hidden flex flex-wrap items-center justify-between gap-2 border-t border-border bg-surface px-4 py-2">
-                <div className="text-sm">
-                  <span className="text-ink-muted">Total due </span>
-                  <span className="font-tabular font-medium text-ink">{formatCurrency(totals?.total ?? 0)}</span>
+            {/* Summary + actions stay in view while the form scrolls. */}
+            <aside className="print:hidden lg:sticky lg:top-6" aria-label="Invoice summary">
+              <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-float">
+                <div className="border-b border-border px-5 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint">Invoice</p>
+                  <p className="font-tabular mt-0.5 text-lg font-semibold text-ink">{currentDraft.number || "Number pending"}</p>
+                  <p className="mt-0.5 truncate text-sm text-ink-muted">{client?.name ?? "No client selected"}</p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={handleSaveDraft}
-                    disabled={saving}
-                  >
-                    <FileDown size={14} /> Save as draft
-                  </Button>
-                  <Button onClick={() => { markDraftStarted(); setConfirmOpen(true); }} disabled={!ready || saving || !currentDraft}>
+
+                <dl className="font-tabular space-y-2.5 px-5 py-4 text-sm">
+                  <div className="flex justify-between"><dt className="text-ink-muted">Subtotal</dt><dd className="font-medium text-ink">{formatCurrency(totals?.subtotal ?? 0)}</dd></div>
+                  {(totals?.discount ?? 0) > 0 && (
+                    <div className="flex justify-between"><dt className="text-ink-muted">Discount</dt><dd className="font-medium text-ink">− {formatCurrency(totals?.discount ?? 0)}</dd></div>
+                  )}
+                  <div className="flex justify-between"><dt className="text-ink-muted">CGST</dt><dd className="font-medium text-ink">{formatCurrency(totals?.cgstAmount ?? 0)}</dd></div>
+                  <div className="flex justify-between"><dt className="text-ink-muted">SGST</dt><dd className="font-medium text-ink">{formatCurrency(totals?.sgstAmount ?? 0)}</dd></div>
+                  {(totals?.roundOff ?? 0) !== 0 && (
+                    <div className="flex justify-between"><dt className="text-ink-muted">Round off</dt><dd className="font-medium text-ink">{formatCurrency(totals?.roundOff ?? 0)}</dd></div>
+                  )}
+                </dl>
+
+                <div className="border-t border-border bg-canvas/60 px-5 py-4">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-sm font-semibold text-ink-muted">Total due</span>
+                    <span className="font-tabular text-2xl font-semibold tracking-tight text-ink">{formatCurrency(totals?.total ?? 0)}</span>
+                  </div>
+                </div>
+
+                <ul className="space-y-1.5 border-t border-border px-5 py-3 text-xs" aria-label="Before you bill">
+                  <li className={cn("flex items-center gap-2", hasClient ? "text-success" : "text-ink-muted")}>
+                    <CheckCircle2 size={14} className={hasClient ? "" : "opacity-40"} /> Client selected
+                  </li>
+                  <li className={cn("flex items-center gap-2", itemsValid ? "text-success" : "text-ink-muted")}>
+                    <CheckCircle2 size={14} className={itemsValid ? "" : "opacity-40"} /> Line items complete
+                  </li>
+                </ul>
+
+                {/* Keep invoice actions in the page flow so every control remains reachable. */}
+                <div className="print:hidden flex flex-col gap-2 border-t border-border p-4">
+                  <Button onClick={() => { markDraftStarted(); setSaveError(null); setConfirmOpen(true); }} disabled={!ready || saving || !currentDraft} className="w-full">
                     <CheckCircle2 size={14} /> Bill invoice
                   </Button>
+                  <Button variant="secondary" onClick={handleSaveDraft} disabled={saving} className="w-full">
+                    <FileDown size={14} /> Save as draft
+                  </Button>
+                  {saveError && !confirmOpen && (
+                    <p role="alert" className="rounded-lg bg-overdue-bg px-3 py-2 text-xs font-medium text-overdue">{saveError}</p>
+                  )}
+                  <p className="pt-1 text-center text-[11px] text-ink-faint">
+                    <kbd className="rounded border border-border bg-canvas px-1 py-0.5 font-sans">Ctrl</kbd> + <kbd className="rounded border border-border bg-canvas px-1 py-0.5 font-sans">Enter</kbd> to bill
+                  </p>
                 </div>
               </div>
-            </div>
-          ) : null}
-        </div>
+            </aside>
+          </div>
+        ) : null}
       </div>
 
       <Modal
@@ -544,6 +608,11 @@ export function CreateInvoicePage() {
         <span className="font-medium text-ink">{client?.name ?? "the selected client"}</span>, due{" "}
         {formatDate(currentDraft?.dueDate ?? "")}. It will not be emailed — you can send it from the invoice's detail page
         whenever you're ready.
+        {saveError && (
+          <span role="alert" className="mt-3 block rounded-lg bg-overdue-bg px-3 py-2 text-xs font-medium text-overdue">
+            {saveError}
+          </span>
+        )}
       </Modal>
 
       <Toast message={toast} onDismiss={() => setToast(null)} />

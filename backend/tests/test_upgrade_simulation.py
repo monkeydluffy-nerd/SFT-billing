@@ -578,7 +578,7 @@ class UpgradeSimulationTests(unittest.TestCase):
         with self.engine.connect() as conn:
             post_upgrade_version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
             print(f"  Post-upgrade migration: {post_upgrade_version}")
-            self.assertEqual(post_upgrade_version, "0012_recovery_attempts")
+            self.assertEqual(post_upgrade_version, "0013_user_mobile")
 
         # Step 6: Verify all data preserved
         print("\n[Step 6] Verifying data integrity...")
@@ -741,7 +741,7 @@ class UpgradeSimulationTests(unittest.TestCase):
         initialize_database(self.engine)
         with self.engine.connect() as conn:
             version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-            self.assertEqual(version, "0012_recovery_attempts")
+            self.assertEqual(version, "0013_user_mobile")
             print(f"  Migration version: {version}")
         self._verify_core_data_preserved(initial_invoices, initial_invoice_totals, initial_payments, initial_client_count)
 
@@ -840,7 +840,7 @@ class FreshInstallationTests(unittest.TestCase):
         # Verify migration version
         with self.engine.connect() as conn:
             version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-            self.assertEqual(version, "0012_recovery_attempts")
+            self.assertEqual(version, "0013_user_mobile")
             print(f"  Migration version: {version}")
 
         session = sessionmaker(bind=self.engine)()

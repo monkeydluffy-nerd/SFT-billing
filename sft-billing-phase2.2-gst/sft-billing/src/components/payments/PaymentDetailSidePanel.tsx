@@ -113,7 +113,7 @@ export function PaymentDetailSidePanel({
             {/* Amount */}
             <div className="bg-success-bg/50 border border-success/20 rounded-lg p-4">
               <p className="text-xs font-medium text-success">Amount Received</p>
-              <p className="mt-1 font-tabular text-2xl font-bold text-success flex items-center gap-2">
+              <p className="mt-1 font-tabular text-2xl font-semibold text-success flex items-center gap-2">
                 <span className="text-success">+</span>
                 {formatCurrency(payment.amount)}
               </p>

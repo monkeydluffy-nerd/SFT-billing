@@ -74,7 +74,7 @@ function validate(values: FormValues): FormErrors {
 }
 
 const inputClass =
-  "h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-border-strong";
+  "h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent focus:ring-4 focus:ring-accent/15";
 const errorInputClass = "border-overdue";
 const labelClass = "mb-1.5 block text-xs font-medium text-ink-muted";
 const errorTextClass = "mt-1 text-xs text-overdue";
@@ -241,7 +241,7 @@ export function AddClientModal({ open, onClose, onCreated, editingClient, onUpda
             onChange={(e) => update("billingAddress", e.target.value)}
             rows={2}
             placeholder="Street, city, state, PIN"
-            className={`w-full rounded-md border bg-surface px-2.5 py-2 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-border-strong ${
+            className={`w-full rounded-md border bg-surface px-2.5 py-2 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent focus:ring-4 focus:ring-accent/15 ${
               errors.billingAddress ? errorInputClass : "border-border"
             }`}
           />
@@ -286,7 +286,7 @@ export function AddClientModal({ open, onClose, onCreated, editingClient, onUpda
             onChange={(e) => update("notes", e.target.value)}
             rows={2}
             placeholder="Anything worth remembering about this client…"
-            className="w-full rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-border-strong"
+            className="w-full rounded-lg border border-border-strong bg-surface px-2.5 py-2 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent focus:ring-4 focus:ring-accent/15"
           />
         </div>
       </form>

@@ -1,7 +1,7 @@
 import { Calendar } from "lucide-react";
 import type { Client, InvoiceStatus } from "@/types";
 import { DATE_PRESET_LABELS, resolvePresetRange, type DatePreset, type ReportFilterState } from "@/lib/reports";
-import { cn } from "@/lib/cn";
+import { Segmented } from "@/components/ui/kit";
 import { Dropdown } from "@/components/shared/Dropdown";
 
 interface ReportFiltersProps {
@@ -48,21 +48,14 @@ export function ReportFilters({
   return (
     <div className="flex flex-wrap items-center gap-3">
       {/* Date Presets */}
-      <div className="flex items-center gap-1 rounded-md border border-border bg-surface p-1">
-        {["this-month", "last-month", "last-3-months", "last-12-months", "custom"].map((preset) => (
-          <button
-            key={preset}
-            type="button"
-            onClick={() => selectPreset(preset as "this-month" | "last-month" | "last-3-months" | "last-12-months" | "custom")}
-            className={cn(
-              "rounded-[5px] px-2.5 py-1.5 text-xs font-medium transition-colors duration-micro",
-              filters.preset === preset ? "bg-accent text-accent-ink" : "text-ink-muted hover:text-ink",
-            )}
-          >
-            {DATE_PRESET_LABELS[preset as "this-month" | "last-month" | "last-3-months" | "last-12-months" | "custom"]}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        value={filters.preset as DatePreset}
+        onChange={(preset) => selectPreset(preset)}
+        options={(["this-month", "last-month", "last-3-months", "last-12-months", "custom"] as DatePreset[]).map((preset) => ({
+          value: preset,
+          label: DATE_PRESET_LABELS[preset as "this-month" | "last-month" | "last-3-months" | "last-12-months" | "custom"],
+        }))}
+      />
 
       {filters.preset === "custom" && (
         <div className="flex items-center gap-1.5">
@@ -73,7 +66,7 @@ export function ReportFilters({
             type="date"
             value={filters.from ?? ""}
             onChange={(e) => onChange({ ...filters, from: e.target.value || null })}
-            className="font-tabular h-9 rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none focus:border-border-strong"
+            className="font-tabular h-10 rounded-full border border-border-strong bg-surface px-4 text-sm text-ink outline-none focus:border-accent focus:ring-4 focus:ring-accent/15"
             aria-label="From date"
           />
           <span className="text-xs text-ink-faint">to</span>
@@ -81,7 +74,7 @@ export function ReportFilters({
             type="date"
             value={filters.to ?? ""}
             onChange={(e) => onChange({ ...filters, to: e.target.value || null })}
-            className="font-tabular h-9 rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none focus:border-border-strong"
+            className="font-tabular h-10 rounded-full border border-border-strong bg-surface px-4 text-sm text-ink outline-none focus:border-accent focus:ring-4 focus:ring-accent/15"
             aria-label="To date"
           />
         </div>
@@ -115,7 +108,7 @@ export function ReportFilters({
       />
 
       {/* Exclude Test Data Toggle */}
-      <label className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-surface text-sm text-ink-muted cursor-pointer hover:bg-canvas transition-colors duration-micro">
+      <label className="flex h-10 items-center gap-2 rounded-full border border-border-strong bg-surface px-4 text-sm text-ink-muted cursor-pointer hover:border-accent transition-colors duration-micro">
         <input
           type="checkbox"
           checked={true}

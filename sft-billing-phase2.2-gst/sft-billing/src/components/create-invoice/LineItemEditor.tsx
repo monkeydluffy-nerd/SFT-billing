@@ -114,7 +114,7 @@ export function LineItemEditor({ items, products, onChange, errors }: LineItemEd
 
   return (
     <div>
-      <div className="grid grid-cols-[1fr_92px_56px_100px_100px_28px] gap-2 px-1 pb-1.5 text-xs font-medium text-ink-faint">
+      <div className="grid grid-cols-[1fr_96px_64px_112px_112px_32px] gap-2 px-1 pb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
         <span>Description</span>
         <span>HSN/SAC</span>
         <span>Qty</span>
@@ -131,7 +131,7 @@ export function LineItemEditor({ items, products, onChange, errors }: LineItemEd
 
           return (
             <div key={item.id}>
-              <div className="grid grid-cols-[1fr_92px_56px_100px_100px_28px] items-center gap-2">
+              <div className="grid grid-cols-[1fr_96px_64px_112px_112px_32px] items-center gap-2">
                 <div className="relative">
                   <input
                     ref={(el) => {
@@ -147,12 +147,12 @@ export function LineItemEditor({ items, products, onChange, errors }: LineItemEd
                     onBlur={() => setTimeout(() => setSuggestFor((cur) => (cur === item.id ? null : cur)), 120)}
                     placeholder="Type to search materials…"
                     className={cn(
-                      "h-9 w-full rounded-md border bg-surface px-2.5 text-sm text-ink outline-none placeholder:text-ink-faint",
-                      error ? "border-overdue" : "border-border focus:border-border-strong",
+                      "h-10 w-full rounded-lg border bg-canvas px-3 text-sm text-ink outline-none transition placeholder:text-ink-faint focus:bg-surface focus:ring-4",
+                      error ? "border-overdue focus:ring-overdue/15" : "border-border-strong focus:border-accent focus:ring-accent/15",
                     )}
                   />
                   {suggestions.length > 0 && (
-                    <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border border-border bg-surface-raised shadow-float">
+                    <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-border-strong bg-surface-raised shadow-float">
                       {suggestions.map((product) => (
                         <button
                           key={product.id}
@@ -194,7 +194,7 @@ export function LineItemEditor({ items, products, onChange, errors }: LineItemEd
                   value={item.hsnCode ?? ""}
                   onChange={(e) => updateItem(item.id, { hsnCode: e.target.value })}
                   placeholder="HSN"
-                  className="font-tabular h-9 w-full rounded-md border border-border bg-surface px-2 text-sm text-ink outline-none focus:border-border-strong"
+                  className="font-tabular h-10 w-full rounded-lg border border-border-strong bg-canvas px-2 text-sm text-ink outline-none transition focus:border-accent focus:bg-surface focus:ring-4 focus:ring-accent/15"
                 />
 
                 <input
@@ -202,7 +202,7 @@ export function LineItemEditor({ items, products, onChange, errors }: LineItemEd
                   inputMode="decimal"
                   value={displayValue(quantityText, item.id, item.quantity)}
                   onChange={(e) => handleNumericChange(item.id, e.target.value, setQuantityText, "quantity")}
-                  className="font-tabular h-9 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-ink outline-none focus:border-border-strong"
+                  className="font-tabular h-10 w-full rounded-lg border border-border-strong bg-canvas px-2.5 text-sm text-ink outline-none transition focus:border-accent focus:bg-surface focus:ring-4 focus:ring-accent/15"
                 />
 
                 <input
@@ -211,7 +211,7 @@ export function LineItemEditor({ items, products, onChange, errors }: LineItemEd
                   value={displayValue(unitPriceText, item.id, item.unitPrice)}
                   onChange={(e) => handleNumericChange(item.id, e.target.value, setUnitPriceText, "unitPrice")}
                   onKeyDown={(e) => onUnitPriceKeyDown(e, index)}
-                  className="font-tabular h-9 w-full rounded-md border border-border bg-surface px-2.5 text-right text-sm text-ink outline-none focus:border-border-strong"
+                  className="font-tabular h-10 w-full rounded-lg border border-border-strong bg-canvas px-2.5 text-right text-sm text-ink outline-none transition focus:border-accent focus:bg-surface focus:ring-4 focus:ring-accent/15"
                 />
 
                 <p className="font-tabular text-right text-sm text-ink">{formatCurrency(amount)}</p>
@@ -220,7 +220,7 @@ export function LineItemEditor({ items, products, onChange, errors }: LineItemEd
                   type="button"
                   onClick={() => removeItem(item.id)}
                   aria-label="Remove line item"
-                  className="flex h-9 w-7 items-center justify-center rounded-md text-ink-faint transition-colors duration-micro hover:bg-canvas hover:text-overdue"
+                  className="flex h-10 w-8 items-center justify-center rounded-lg text-ink-faint transition-colors duration-micro hover:bg-canvas hover:text-overdue"
                 >
                   <Trash2 size={14} />
                 </button>

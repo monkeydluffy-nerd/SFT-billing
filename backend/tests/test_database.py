@@ -216,7 +216,7 @@ class ClientDatabaseMigrationTests(unittest.TestCase):
                 connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar(),
-                "0012_recovery_attempts",
+                "0013_user_mobile",
             )
             self.assertEqual(connection.exec_driver_sql("PRAGMA foreign_keys").scalar(), 1)
 
@@ -451,7 +451,7 @@ initialize_business_profile_database(engine)
                     connection.execute(
                         text("SELECT version_num FROM alembic_version")
                     ).scalar(),
-                    "0012_recovery_attempts",
+                    "0013_user_mobile",
                 )
                 self.assertEqual(
                     connection.exec_driver_sql("PRAGMA foreign_key_check").all(),

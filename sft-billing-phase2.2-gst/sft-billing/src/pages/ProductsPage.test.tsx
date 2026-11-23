@@ -56,8 +56,8 @@ describe("ProductsPage", () => {
 
     expect(await screen.findByText("Widget")).toBeInTheDocument();
     expect(screen.getByText("Repair service")).toBeInTheDocument();
-    // GST now appears in subline under name (2 products) + filter chips (18% chip)
-    expect(screen.getAllByText("18%")).toHaveLength(3);
+    // GST shows as "18% GST" on each product card (2 products) plus the 18% filter tab
+    expect(screen.getAllByText(/18%/)).toHaveLength(3);
     // Status column and Activate/Deactivate buttons removed
     expect(screen.queryByRole("button", { name: "Deactivate" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Activate" })).not.toBeInTheDocument();

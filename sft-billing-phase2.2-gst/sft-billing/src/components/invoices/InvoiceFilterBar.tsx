@@ -1,7 +1,8 @@
-import { Search, X, Calendar, ChevronDown, Filter, CheckCircle2, AlertTriangle, Clock, FileEdit } from "lucide-react";
+import { X, Calendar, ChevronDown, Filter, CheckCircle2, AlertTriangle, Clock, FileEdit } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { Client, Invoice, InvoiceStatus, Payment } from "@/types";
 import { cn } from "@/lib/cn";
+import { Segmented, SearchField } from "@/components/ui/kit";
 import { getInvoiceWorkflowStatus } from "@/lib/invoiceMath";
 
 interface InvoiceFilterBarProps {
@@ -91,51 +92,24 @@ export function InvoiceFilterBar({
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      {/* Search */}
-      <div className="flex h-9 min-w-[220px] items-center gap-2 rounded-md border border-border bg-surface px-3">
-        <Search size={14} className="text-ink-faint" aria-hidden />
-        <input
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Search invoice or client"
-          className="h-full flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
-          aria-label="Search invoices"
-        />
-        {query && (
-          <button type="button" onClick={() => onQueryChange("")} aria-label="Clear search">
-            <X size={13} className="text-ink-faint" />
-          </button>
-        )}
-      </div>
+      <SearchField
+        value={query}
+        onChange={onQueryChange}
+        placeholder="Search invoice or client"
+        label="Search invoices"
+        className="w-full sm:w-72"
+      />
 
-      {/* Status Filter Chips with Counts */}
-      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by status">
-        {STATUS_OPTIONS.map((option) => {
-          const active = statusFilter === option.value;
-          const count = statusCounts[option.value];
-          const Icon = option.icon;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => onStatusChange(active ? null : option.value)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors duration-micro",
-                active
-                  ? "bg-accent text-accent-ink border-accent shadow-sm"
-                  : "border-border bg-surface text-ink-muted hover:border-border-strong hover:bg-canvas",
-              )}
-              aria-pressed={active}
-            >
-              <Icon size={12} aria-hidden />
-              {option.label}
-              <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-tabular", active ? "bg-accent-ink/20" : "bg-canvas/50")}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Status filter — segmented tabs (shadcn / Origin UI style) */}
+      <Segmented
+        className="w-full overflow-x-auto sm:w-auto"
+        value={(statusFilter ?? "all") as InvoiceStatus | "all"}
+        onChange={(value) => onStatusChange(value === "all" ? null : value)}
+        options={[
+          { value: "all", label: "All", count: (statusCounts.pending + statusCounts.paid + statusCounts.overdue + statusCounts.draft) },
+          ...STATUS_OPTIONS.map((option) => ({ value: option.value, label: option.label, count: statusCounts[option.value] })),
+        ]}
+      />
 
       {/* Client Filter - Custom Searchable Dropdown */}
       <div className="relative" ref={clientDropdownRef}>
@@ -143,8 +117,8 @@ export function InvoiceFilterBar({
           type="button"
           onClick={() => setClientDropdownOpen(!clientDropdownOpen)}
           className={cn(
-            "flex h-9 items-center gap-2 rounded-md border px-2.5 text-sm font-medium transition-colors duration-micro",
-            clientFilter ? "border-accent bg-accent/5 text-accent" : "border-border bg-surface text-ink hover:border-border-strong",
+            "flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors duration-micro",
+            clientFilter ? "border-accent bg-accent/5 text-accent" : "border-border-strong bg-surface text-ink hover:border-accent",
           )}
           aria-haspopup="listbox"
           aria-expanded={clientDropdownOpen}
@@ -158,14 +132,14 @@ export function InvoiceFilterBar({
         </button>
 
         {clientDropdownOpen && (
-          <div className="absolute right-0 top-full mt-1.5 min-w-[240px] max-h-64 rounded-lg border border-border bg-surface shadow-float-lg overflow-hidden z-20 animate-in fade-in-0 zoom-in-95 duration-micro">
+          <div className="absolute right-0 top-full mt-1.5 min-w-[240px] max-h-64 rounded-xl border border-border bg-surface-raised shadow-float-lg overflow-hidden z-20 animate-in fade-in-0 zoom-in-95 duration-micro">
             <div className="border-b border-border p-2">
               <input
                 type="text"
                 value={clientSearch}
                 onChange={(e) => setClientSearch(e.target.value)}
                 placeholder="Search clients..."
-                className="w-full h-8 rounded-md border border-border bg-canvas px-3 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-border-strong"
+                className="w-full h-8 rounded-lg border border-border bg-canvas px-3 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent focus:ring-4 focus:ring-accent/15"
                 autoFocus
                 aria-label="Search clients"
               />
@@ -222,8 +196,8 @@ export function InvoiceFilterBar({
           type="button"
           onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
           className={cn(
-            "flex h-9 items-center gap-2 rounded-md border px-2.5 text-sm font-medium transition-colors duration-micro",
-            dateRange.from || dateRange.to ? "border-accent bg-accent/5 text-accent" : "border-border bg-surface text-ink hover:border-border-strong",
+            "flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors duration-micro",
+            dateRange.from || dateRange.to ? "border-accent bg-accent/5 text-accent" : "border-border-strong bg-surface text-ink hover:border-accent",
           )}
           aria-haspopup="listbox"
           aria-expanded={dateDropdownOpen}
@@ -239,7 +213,7 @@ export function InvoiceFilterBar({
         </button>
 
         {dateDropdownOpen && (
-          <div className="absolute right-0 top-full mt-1.5 min-w-[200px] rounded-lg border border-border bg-surface shadow-float-lg overflow-hidden z-20 animate-in fade-in-0 zoom-in-95 duration-micro">
+          <div className="absolute right-0 top-full mt-1.5 min-w-[200px] rounded-xl border border-border bg-surface-raised shadow-float-lg overflow-hidden z-20 animate-in fade-in-0 zoom-in-95 duration-micro">
             <div className="p-2 border-b border-border text-xs font-medium text-ink-muted uppercase tracking-wider">Quick ranges</div>
             {DATE_RANGES.map((range) => {
               const r = range.getRange();

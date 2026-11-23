@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { ArrowLeft, Inbox, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Button } from "@/components/shared/Button";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Skeleton } from "@/components/shared/SkeletonLoader";
 import { InvoiceHeader } from "@/components/invoices/InvoiceHeader";
 import { ActionToolbar } from "@/components/invoices/ActionToolbar";
 import { InvoicePreview } from "@/components/invoices/InvoicePreview";
+import { InvoicePdfViewer } from "@/components/invoices/InvoicePdfViewer";
 import { InvoiceSummary } from "@/components/invoices/InvoiceSummary";
 import { PaymentHistoryList } from "@/components/invoices/PaymentHistoryList";
 import { useInvoices } from "@/hooks/useInvoices";
@@ -58,16 +60,12 @@ export function InvoicePage() {
         <PageHeader
           title="Invoice"
           action={
-            <button
-              type="button"
-              onClick={() => goToInvoices()}
-              className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent transition-colors duration-micro hover:border-accent/40 hover:bg-accent/[0.14]"
-            >
+            <Button variant="secondary" onClick={() => goToInvoices()}>
               <ArrowLeft size={14} /> Back to invoices
-            </button>
+            </Button>
           }
         />
-        <div className="px-10 py-10">
+        <div className="px-6 lg:px-8 py-10">
           <EmptyState
             icon={AlertTriangle}
             title="Couldn't load invoice"
@@ -91,7 +89,7 @@ export function InvoicePage() {
     return (
       <div>
         <PageHeader title="Invoice" subtitle="Loading…" />
-        <div className="space-y-2 px-10 py-7">
+        <div className="space-y-2 px-6 lg:px-8 py-7">
           {Array.from({ length: 4 }).map((_, index) => (
             <Skeleton key={index} className="h-14 w-full" />
           ))}
@@ -106,16 +104,12 @@ export function InvoicePage() {
         <PageHeader
           title="Invoice"
           action={
-            <button
-              type="button"
-              onClick={() => goToInvoices()}
-              className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent transition-colors duration-micro hover:border-accent/40 hover:bg-accent/[0.14]"
-            >
+            <Button variant="secondary" onClick={() => goToInvoices()}>
               <ArrowLeft size={14} /> Back to invoices
-            </button>
+            </Button>
           }
         />
-        <div className="px-10 py-10">
+        <div className="px-6 lg:px-8 py-10">
           <EmptyState icon={Inbox} title="Invoice not found" description="This invoice may have been removed." />
         </div>
       </div>
@@ -132,18 +126,14 @@ export function InvoicePage() {
         <PageHeader
           title="Invoice"
           action={
-            <button
-              type="button"
-              onClick={() => goToInvoices()}
-              className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent transition-colors duration-micro hover:border-accent/40 hover:bg-accent/[0.14]"
-            >
+            <Button variant="secondary" onClick={() => goToInvoices()}>
               <ArrowLeft size={14} /> Back to invoices
-            </button>
+            </Button>
           }
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto px-10 py-7 print:px-0 print:py-0 space-y-6">
+      <div className="space-y-5 px-6 pb-10 lg:px-8 print:px-0 print:py-0">
         {/* Invoice Header */}
         <InvoiceHeader
           invoice={invoice}
@@ -184,27 +174,26 @@ export function InvoicePage() {
           />
         </div>
 
-        {/* Invoice Preview */}
-        <InvoicePreview
-          invoice={invoice}
-          client={client}
-          business={business}
-          isExpanded={isPreviewExpanded}
-        />
-
-        {/* Invoice Summary and Details */}
-        <InvoiceSummary
-          invoice={invoice}
-          client={client}
-          ledgerInfo={ledgerInfo}
-          invoicePayments={invoicePayments}
-        />
-
-        {/* Payment History */}
-        <section aria-label="Payment history" className="print:hidden">
-          <p className="mb-3 text-sm font-medium text-ink">Payment history</p>
-          <PaymentHistoryList payments={invoicePayments} onOpenReceipt={navigateToPaymentReceipt} />
-        </section>
+        {/* The real PDF (what "Download PDF" delivers) beside the ledger details */}
+        <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="min-w-0 print:hidden">
+            <InvoicePdfViewer
+              invoice={invoice}
+              fallback={
+                <div className="mt-4 w-full text-left">
+                  <InvoicePreview invoice={invoice} client={client} business={business} isExpanded={isPreviewExpanded} />
+                </div>
+              }
+            />
+          </div>
+          <div className="space-y-8 xl:sticky xl:top-4 print:hidden">
+            <InvoiceSummary invoice={invoice} client={client} ledgerInfo={ledgerInfo} invoicePayments={invoicePayments} />
+            <section aria-label="Payment history">
+              <p className="mb-3 text-sm font-medium text-ink">Payment history</p>
+              <PaymentHistoryList payments={invoicePayments} onOpenReceipt={navigateToPaymentReceipt} />
+            </section>
+          </div>
+        </div>
       </div>
     </div>
   );

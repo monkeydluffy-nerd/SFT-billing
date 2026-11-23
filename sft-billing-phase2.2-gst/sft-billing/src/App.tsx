@@ -14,6 +14,8 @@ import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import LoginPage from "@/features/login/LoginPage";
+import SignUpPage from "@/features/login/SignUpPage";
+import { getApiBaseUrl } from "@/services/backendPort";
 import "@/features/login/login.css";
 
 /**
@@ -29,6 +31,14 @@ export function App() {
   const selectedClientId = useWorkspaceStore((s) => s.selectedClientId);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const checkAuth = useAuthStore((s) => s.checkAuth);
+  const theme = useWorkspaceStore((s) => s.theme);
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
+
+  // Keep the document root in sync with the theme so the login screen,
+  // loading screen, and portals all follow the same light/dark setting.
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
 
   const handleReady = useCallback(() => {
     setAppReady(true);
@@ -48,6 +58,23 @@ export function App() {
     });
     return () => { mounted = false; };
   }, [checkAuth]);
+
+  // First launch on a new install: no account exists yet, so show sign-up instead of login.
+  useEffect(() => {
+    if (!appReady || isAuthenticated) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const base = await getApiBaseUrl();
+        const res = await fetch(`${base}/api/auth/first-run-status`);
+        const body = await res.json();
+        if (!cancelled) setNeedsSetup(Boolean(body.needs_setup));
+      } catch {
+        if (!cancelled) setNeedsSetup(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [appReady, isAuthenticated]);
 
   // Show loading screen until backend is ready
   if (!appReady) {
@@ -80,7 +107,7 @@ export function App() {
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors duration-micro hover:bg-accent/90"
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors duration-micro hover:bg-accent/90"
             >
               Reload Application
             </button>
@@ -90,12 +117,14 @@ export function App() {
     );
   }
 
-  // Show login page if not authenticated
+  // Show sign-up (first launch) or login if not authenticated
   if (!isAuthenticated) {
+    if (needsSetup === null) return null;
+    if (needsSetup) return <SignUpPage logoSrc="/brand/surfine-horizontal.png" version="1.1.0" />;
     return (
       <LoginPage
-        logoSrc="/surfine-technology-logo.png"
-        version="0.1.1"
+        logoSrc="/brand/surfine-horizontal.png"
+        version="1.1.0"
         onSubmit={async (credentials) => {
           const { login } = useAuthStore.getState();
           await login(credentials.username, credentials.password);
@@ -107,63 +136,28 @@ export function App() {
   const renderPage = () => {
     switch (currentPage) {
       case "invoices":
-        return (
-          <AppShell>
-            <InvoicesPage />
-          </AppShell>
-        );
+        return <InvoicesPage />;
       case "create-invoice":
-        return (
-          <AppShell>
-            <CreateInvoicePage />
-          </AppShell>
-        );
+        return <CreateInvoicePage />;
       case "clients":
-        return (
-          <AppShell>
-            {selectedClientId ? <ClientDetailPage /> : <ClientsPage />}
-          </AppShell>
-        );
+        return selectedClientId ? <ClientDetailPage /> : <ClientsPage />;
       case "products":
-        return (
-          <AppShell>
-            <ProductsPage />
-          </AppShell>
-        );
+        return <ProductsPage />;
       case "payments":
-        return (
-          <AppShell>
-            <PaymentsPage />
-          </AppShell>
-        );
+        return <PaymentsPage />;
       case "invoice-detail":
-        return (
-          <AppShell>
-            <InvoicePage />
-          </AppShell>
-        );
+        return <InvoicePage />;
       case "reports":
       case "intelligence":
-        return (
-          <AppShell>
-            <ReportsPage />
-          </AppShell>
-        );
+        return <ReportsPage />;
       case "settings":
-        return (
-          <AppShell>
-            <WorkspaceSettingsPage />
-          </AppShell>
-        );
+        return <WorkspaceSettingsPage />;
       case "overview":
       default:
-        return (
-          <AppShell>
-            <OverviewPage />
-          </AppShell>
-        );
+        return <OverviewPage />;
     }
   };
 
-  return renderPage();
+  // One persistent shell: the sidebar never remounts, and page changes animate.
+  return <AppShell pageKey={`${currentPage}:${selectedClientId ?? ""}`}>{renderPage()}</AppShell>;
 }

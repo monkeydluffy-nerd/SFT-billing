@@ -22,7 +22,7 @@ interface SignalCardProps {
 export function SignalCard({ signal }: SignalCardProps) {
   const { icon: Icon, classes } = TONE_CONFIG[signal.tone];
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
+    <div className="rounded-xl border border-border bg-surface p-5">
       <div className="flex items-start gap-3">
         <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-md", classes)}>
           <Icon size={15} aria-hidden />

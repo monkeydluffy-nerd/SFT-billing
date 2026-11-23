@@ -25,7 +25,7 @@ export function BulkActionBar({ count, onSendReminders, onDownload, onMarkReceiv
             type="button"
             onClick={onDownload}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors duration-micro hover:border-border-strong hover:bg-canvas disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors duration-micro hover:border-border-strong hover:bg-canvas disabled:opacity-50"
           >
             <Download size={12} /> Download
           </button>
@@ -33,7 +33,7 @@ export function BulkActionBar({ count, onSendReminders, onDownload, onMarkReceiv
             type="button"
             onClick={onSendReminders}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors duration-micro hover:border-border-strong hover:bg-canvas disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors duration-micro hover:border-border-strong hover:bg-canvas disabled:opacity-50"
           >
             <BellRing size={12} /> Remind
           </button>

@@ -14,18 +14,18 @@ interface ReportTableProps<T> {
   rowKey: (row: T) => string;
 }
 
-/** A single reusable table shell for every report type - consistent headers, consistent row rhythm. */
+/** A single reusable table shell for every report type: one card, quiet header, hairline rows. */
 export function ReportTable<T>({ columns, rows, renderRow, rowKey }: ReportTableProps<T>) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border">
+    <div className="overflow-hidden rounded-xl border border-border bg-surface">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-sm">
           <thead>
-            <tr className="border-b border-border bg-surface">
+            <tr className="border-b border-border">
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`px-4 py-2.5 text-xs font-medium text-ink-muted ${col.align === "right" ? "text-right" : "text-left"} ${col.width ?? ""}`}
+                  className={`px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-ink-faint ${col.align === "right" ? "text-right" : "text-left"} ${col.width ?? ""}`}
                   style={col.width ? { width: col.width.replace("w-[", "").replace("]", "") } : undefined}
                 >
                   {col.label}
@@ -35,7 +35,7 @@ export function ReportTable<T>({ columns, rows, renderRow, rowKey }: ReportTable
           </thead>
           <tbody className="divide-y divide-border">
             {rows.map((row) => (
-              <tr key={rowKey(row)} className="transition-colors duration-micro hover:bg-canvas">
+              <tr key={rowKey(row)} className="transition-colors duration-micro hover:bg-canvas/70">
                 {renderRow(row)}
               </tr>
             ))}

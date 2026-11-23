@@ -11,7 +11,7 @@ import "./forgot-password.css";
 /** What onVerify must resolve with. */
 export type VerifyResult =
   | { status: "verified"; resetToken: string }
-  | { status: "invalid" } // use for BOTH unknown username and wrong key (same message, same timing)
+  | { status: "invalid"; message?: string } // use for BOTH unknown username and wrong key (same message, same timing)
   | { status: "locked"; retryAfterSeconds: number }
   | { status: "error"; message?: string };
 
@@ -28,20 +28,18 @@ export interface ForgotPasswordModalProps {
   /** Called on Cancel, Escape, backdrop click, and "Back to sign in" from the lockout screen. */
   onClose: () => void;
   /** Step 1. Send username + recovery key to your backend. Never log these values. */
-  onVerify: (input: { username: string; recoveryKey: string }) => Promise<VerifyResult>;
+  onVerify: (input: { mobile: string }) => Promise<VerifyResult>;
   /** Step 2. Send the single-use reset token + new password to your backend. */
   onResetPassword: (input: { resetToken: string; newPassword: string }) => Promise<ResetResult>;
   /** Called from the success screen ("Back to sign in"). Falls back to onClose. */
   onDone?: () => void;
-  /** UI hint and client-side check only. The backend must enforce its own minimum. Default 12. */
+  /** UI hint and client-side check only. The backend must enforce its own minimum. Default 8. */
   minPasswordLength?: number;
-  /** Optionally prefill the username from the login form. */
-  defaultUsername?: string;
 }
 
 type Step = "identify" | "verifying" | "reset" | "saving" | "success" | "locked";
 
-const INVALID_MESSAGE = "The username or recovery key is incorrect.";
+const INVALID_MESSAGE = "This mobile number is not registered.";
 const GENERIC_ERROR = "Something went wrong. Please try again.";
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
@@ -104,7 +102,7 @@ function SecretField(props: {
 
 /* --------------------------- modal ----------------------------- */
 export default function ForgotPasswordModal({
-  open, onClose, onVerify, onResetPassword, onDone, minPasswordLength = 12, defaultUsername = "",
+  open, onClose, onVerify, onResetPassword, onDone, minPasswordLength = 8,
 }: ForgotPasswordModalProps) {
   const uid = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -112,8 +110,7 @@ export default function ForgotPasswordModal({
   const returnFocusRef = useRef<HTMLElement | null>(null);
 
   const [step, setStep] = useState<Step>("identify");
-  const [username, setUsername] = useState(defaultUsername);
-  const [recoveryKey, setRecoveryKey] = useState("");
+  const [mobile, setMobile] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -132,8 +129,7 @@ export default function ForgotPasswordModal({
       document.body.style.overflow = previousOverflow;
       tokenRef.current = null;
       setStep("identify");
-      setUsername(defaultUsername);
-      setRecoveryKey("");
+      setMobile("");
       setNewPassword("");
       setConfirm("");
       setError(null);
@@ -168,25 +164,22 @@ export default function ForgotPasswordModal({
   async function handleVerify(e: FormEvent) {
     e.preventDefault();
     if (step !== "identify") return;
-    if (!username.trim() || !recoveryKey.trim()) {
-      setError("Enter your username and recovery key.");
+    if (mobile.replace(/\D/g, "").length < 10) {
+      setError("Enter your 10-digit mobile number.");
       return;
     }
     setError(null);
     setStep("verifying");
     try {
-      const r = await onVerify({ username: username.trim(), recoveryKey: recoveryKey.trim() });
+      const r = await onVerify({ mobile: mobile.trim() });
       if (r.status === "verified") {
         tokenRef.current = r.resetToken;
-        setRecoveryKey("");
         setStep("reset");
       } else if (r.status === "locked") {
-        setRecoveryKey("");
         setLockUntil(Date.now() + Math.max(1, r.retryAfterSeconds) * 1000);
         setStep("locked");
       } else if (r.status === "invalid") {
-        setRecoveryKey("");
-        setError(INVALID_MESSAGE);
+        setError(r.message ?? INVALID_MESSAGE);
         setStep("identify");
       } else {
         setError(r.message ?? GENERIC_ERROR);
@@ -263,7 +256,7 @@ export default function ForgotPasswordModal({
   const matchOk = confirm.length > 0 && newPassword === confirm;
 
   const copy: Record<Step, { title: string; text: string }> = {
-    identify: { title: "Recover your account", text: "Enter your username and the recovery key saved when the administrator account was set up." },
+    identify: { title: "Recover your account", text: "Enter the mobile number you registered with and you can set a new password." },
     verifying: { title: "Recover your account", text: "Checking your details." },
     reset: { title: "Set a new password", text: "Choose a strong password. You will sign in with it next." },
     saving: { title: "Set a new password", text: "Saving your new password." },
@@ -311,34 +304,29 @@ export default function ForgotPasswordModal({
         {(step === "identify" || step === "verifying") && (
           <form onSubmit={handleVerify} noValidate>
             <div className="sft-fp__field">
-              <label className="sft-fp__label" htmlFor={`${uid}-user`}>Username</label>
+              <label className="sft-fp__label" htmlFor={`${uid}-mobile`}>Mobile number</label>
               <input
-                id={`${uid}-user`}
+                id={`${uid}-mobile`}
                 className="sft-fp__input"
-                type="text"
-                autoComplete="username"
-                placeholder="Enter your username"
-                value={username}
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel"
+                placeholder="10-digit mobile number"
+                value={mobile}
                 disabled={busy}
                 aria-invalid={!!error || undefined}
                 aria-describedby={error ? errId : undefined}
                 data-autofocus=""
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => setMobile(e.target.value)}
               />
             </div>
-            <SecretField
-              id={`${uid}-key`} label="Recovery key" mono
-              value={recoveryKey} onChange={setRecoveryKey}
-              autoComplete="off" placeholder="XXXX-XXXX-XXXX-XXXX"
-              disabled={busy} invalid={!!error} describedBy={error ? errId : undefined}
-            />
             {error && (
               <p id={errId} className="sft-fp__error" role="alert"><AlertIcon /> <span>{error}</span></p>
             )}
             <div className="sft-fp__actions">
               <button type="button" className="sft-fp__ghost" onClick={onClose} disabled={busy}>Cancel</button>
               <button type="submit" className="sft-fp__primary" disabled={busy} aria-busy={busy}>
-                {busy ? "Verifying" : "Verify"} <ArrowIcon />
+                {busy ? "Checking" : "Continue"} <ArrowIcon />
               </button>
             </div>
           </form>

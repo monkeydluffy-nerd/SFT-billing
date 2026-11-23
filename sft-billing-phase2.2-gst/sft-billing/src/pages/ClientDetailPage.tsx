@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { ArrowLeft, Inbox, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Button } from "@/components/shared/Button";
+import { Avatar, Card, Stat, StatGroup } from "@/components/ui/kit";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Toast } from "@/components/shared/Toast";
 import { AddClientModal } from "@/components/clients/AddClientModal";
@@ -44,7 +46,7 @@ export function ClientDetailPage() {
     return (
       <div>
         <PageHeader title="Client" subtitle="Loading…" />
-        <div className="space-y-2 px-10 py-7">
+        <div className="space-y-2 px-6 lg:px-8 py-7">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-14 w-full" />
           ))}
@@ -59,21 +61,26 @@ export function ClientDetailPage() {
         <PageHeader
           title="Client"
           action={
-            <button
-              type="button"
-              onClick={() => goToClients()}
-              className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent transition-colors duration-micro hover:border-accent/40 hover:bg-accent/[0.14]"
-            >
+            <Button variant="secondary" onClick={() => goToClients()}>
               <ArrowLeft size={14} /> Back to clients
-            </button>
+            </Button>
           }
         />
-        <div className="px-10 py-10">
+        <div className="px-6 lg:px-8 py-10">
           <EmptyState icon={Inbox} title="Client not found" description="This client may have been removed." />
         </div>
       </div>
     );
   }
+
+  const billedShare = rollup && rollup.totalBilled > 0 ? Math.min(100, (rollup.totalReceived / rollup.totalBilled) * 100) : 0;
+  const details: Array<[string, string]> = [
+    ["Contact", client.contactName || "—"],
+    ["Email", client.email || "—"],
+    ["Phone", client.phone ?? "—"],
+    ["GSTIN", client.gstin ?? "—"],
+    ["Billing address", client.billingAddress || "—"],
+  ];
 
   return (
     <div>
@@ -81,109 +88,93 @@ export function ClientDetailPage() {
         title={client.name}
         subtitle="Client details"
         action={
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setEditOpen(true)}
-              className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink transition-opacity duration-micro hover:opacity-90"
-            >
-              <Pencil size={14} /> Edit client
-            </button>
-            <button
-              type="button"
-              onClick={() => goToClients()}
-              className="flex items-center gap-1.5 rounded-md border border-accent/25 bg-accent/[0.08] px-3 py-1.5 text-sm font-medium text-accent transition-colors duration-micro hover:border-accent/40 hover:bg-accent/[0.14]"
-            >
+          <>
+            <Button variant="secondary" onClick={() => goToClients()}>
               <ArrowLeft size={14} /> Back to clients
-            </button>
-          </div>
+            </Button>
+            <Button onClick={() => setEditOpen(true)}>
+              <Pencil size={14} /> Edit client
+            </Button>
+          </>
         }
       />
 
-      <div className="space-y-8 px-10 py-7">
+      <div className="space-y-6 px-6 pb-12 lg:px-8">
         {rollup && (
-          <div className="grid grid-cols-2 gap-4 rounded-lg border border-border p-5 sm:grid-cols-4">
-            <div>
-              <p className="text-xs font-medium text-ink-faint">Total Billed</p>
-              <p className="font-tabular mt-1 text-lg text-ink">{formatCurrency(rollup.totalBilled)}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-ink-faint">Received</p>
-              <p className="font-tabular mt-1 text-lg text-success">{formatCurrency(rollup.totalReceived)}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-ink-faint">Outstanding</p>
-              <p className="font-tabular mt-1 text-lg text-pending">{formatCurrency(rollup.totalOutstanding)}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-ink-faint">Overdue</p>
-              <p className="font-tabular mt-1 text-lg text-overdue">{formatCurrency(rollup.totalOverdue)}</p>
-            </div>
-          </div>
+          <StatGroup className="md:[--cols:4]">
+            <Stat label="Total billed" tone="accent" value={rollup.totalBilled} format={(n) => formatCurrency(n)} />
+            <Stat label="Received" tone="success" value={rollup.totalReceived} format={(n) => formatCurrency(n)} delay={0.06} sub={`${Math.round(billedShare)}% collected`} />
+            <Stat label="Outstanding" tone="pending" value={rollup.totalOutstanding} format={(n) => formatCurrency(n)} delay={0.12} />
+            <Stat label="Overdue" tone="overdue" value={rollup.totalOverdue} format={(n) => formatCurrency(n)} delay={0.18} />
+          </StatGroup>
         )}
 
-        <div className="grid grid-cols-2 gap-4 rounded-lg border border-border p-5 sm:grid-cols-3">
-          <div>
-            <p className="text-xs font-medium text-ink-faint">Contact</p>
-            <p className="mt-1 text-sm text-ink truncate">{client.contactName}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-ink-faint">Email</p>
-            <p className="mt-1 text-sm text-ink truncate">{client.email}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-ink-faint">Phone</p>
-            <p className="mt-1 text-sm text-ink truncate">{client.phone ?? "—"}</p>
-          </div>
-          <div className="sm:col-span-2">
-            <p className="text-xs font-medium text-ink-faint">Billing address</p>
-            <p className="mt-1 text-sm text-ink truncate">{client.billingAddress}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-ink-faint">GSTIN</p>
-            <p className="mt-1 text-sm text-ink truncate">{client.gstin ?? "—"}</p>
-          </div>
-          {client.notes && (
-            <div className="col-span-full">
-              <p className="text-xs font-medium text-ink-faint">Notes</p>
-              <p className="mt-1 text-sm text-ink-muted">{client.notes}</p>
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+          <Card className="p-5">
+            <div className="flex items-center gap-3">
+              <Avatar name={client.name} className="h-12 w-12 text-sm" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-ink">{client.name}</p>
+                <p className="truncate text-xs text-ink-muted">{client.contactName || "No contact on file"}</p>
+              </div>
             </div>
-          )}
-        </div>
+            <dl className="mt-4 divide-y divide-border text-sm">
+              {details.map(([label, value]) => (
+                <div key={label} className="py-2.5">
+                  <dt className="text-xs text-ink-faint">{label}</dt>
+                  <dd className="mt-0.5 break-words text-ink">{value}</dd>
+                </div>
+              ))}
+              {client.notes && (
+                <div className="py-2.5">
+                  <dt className="text-xs text-ink-faint">Notes</dt>
+                  <dd className="mt-0.5 text-ink-muted">{client.notes}</dd>
+                </div>
+              )}
+            </dl>
+          </Card>
 
-        <div>
-          <p className="mb-3 text-sm font-medium text-ink">Invoices</p>
-          {clientInvoices.length === 0 ? (
-            <EmptyState icon={Inbox} title="No invoices yet" description="Invoices for this client will appear here." />
-          ) : (
-            <div className="overflow-hidden rounded-lg border border-border">
-              {clientInvoices.map((invoice) => {
-                const { total } = computeInvoiceTotals(invoice);
-                const invoicePayments = (payments ?? []).filter((p) => p.invoiceId === invoice.id);
-                const ledgerInfo = invoice.isDraft ? null : getInvoiceLedgerStatus(invoice, invoicePayments);
-                return (
-                  <div
-                    key={invoice.id}
-                    className="flex items-center gap-4 border-b border-border px-4 py-3 last:border-b-0"
-                  >
-                    <span className="w-24 shrink-0">
-                      <InvoiceNumberLink invoice={invoice} />
-                    </span>
-                    <span className="flex-1 truncate text-ink-muted">{formatDate(invoice.issueDate)}</span>
-                    <span className="w-28 shrink-0 text-ink-muted">{formatDate(invoice.dueDate)}</span>
-                    <span className="font-tabular w-28 shrink-0 text-right text-ink">{formatCurrency(total)}</span>
-                    <span className="w-36 shrink-0">
-                      {invoice.isDraft ? (
-                        <StatusChip info={getInvoiceStatus(invoice)} />
-                      ) : ledgerInfo ? (
-                        <LedgerStatusChip info={ledgerInfo} />
-                      ) : null}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <section aria-label="Client invoices">
+            <p className="mb-3 text-sm font-semibold text-ink">Invoices</p>
+            {clientInvoices.length === 0 ? (
+              <EmptyState icon={Inbox} title="No invoices yet" description="Invoices for this client will appear here." />
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-border bg-surface">
+                <div className="grid grid-cols-[110px_1fr_110px_110px_150px] gap-3 border-b border-border px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-ink-faint">
+                  <span>Invoice</span>
+                  <span>Issued</span>
+                  <span>Due</span>
+                  <span className="text-right">Amount</span>
+                  <span>Status</span>
+                </div>
+                {clientInvoices.map((invoice) => {
+                  const { total } = computeInvoiceTotals(invoice);
+                  const invoicePayments = (payments ?? []).filter((p) => p.invoiceId === invoice.id);
+                  const ledgerInfo = invoice.isDraft ? null : getInvoiceLedgerStatus(invoice, invoicePayments);
+                  return (
+                    <div
+                      key={invoice.id}
+                      className="grid grid-cols-[110px_1fr_110px_110px_150px] items-center gap-3 border-b border-border px-5 py-3.5 text-sm transition-colors last:border-b-0 hover:bg-canvas/70"
+                    >
+                      <span>
+                        <InvoiceNumberLink invoice={invoice} />
+                      </span>
+                      <span className="truncate text-ink-muted">{formatDate(invoice.issueDate)}</span>
+                      <span className="text-ink-muted">{formatDate(invoice.dueDate)}</span>
+                      <span className="font-tabular text-right font-medium text-ink">{formatCurrency(total)}</span>
+                      <span>
+                        {invoice.isDraft ? (
+                          <StatusChip info={getInvoiceStatus(invoice)} />
+                        ) : ledgerInfo ? (
+                          <LedgerStatusChip info={ledgerInfo} />
+                        ) : null}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         </div>
       </div>
 

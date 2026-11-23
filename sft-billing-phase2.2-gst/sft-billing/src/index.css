@@ -13,6 +13,22 @@
 
   body {
     @apply bg-canvas text-ink font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings that used the old serif display face now use the UI face with
+     tighter tracking and a firmer weight. Utilities (font-medium etc.) still
+     win because this lives in the base layer. */
+  .font-display {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  /* Thin, theme-aware scrollbars. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--color-border-strong)) transparent;
   }
 
   /* Visible keyboard focus everywhere — this is office software used all

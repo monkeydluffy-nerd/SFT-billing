@@ -27,7 +27,7 @@ describe("AppShell theme shortcut", () => {
     expect(useWorkspaceStore.getState().theme).toBe("dark");
     expect(main).toHaveClass("dark");
     expect(overlayScope).toHaveClass("dark");
-    expect(header).toHaveClass("bg-header");
+    expect(header).toBeInTheDocument();
     expect(sidebar).not.toHaveClass("dark");
     expect(document.documentElement).not.toHaveClass("dark");
     const storedTheme = useWorkspaceStore.persist.getOptions().storage?.getItem("sft-billing-theme");

@@ -28,44 +28,29 @@ describe("SidebarNav active indicator", () => {
     const indicators = container.querySelectorAll(".sidebar-active-indicator");
     expect(indicators).toHaveLength(1);
     expect(indicators[0].parentElement).toBe(activeButton);
-    expect(indicators[0]).toHaveClass("absolute", "right-0", "top-0", "bottom-0");
+    expect(indicators[0]).toHaveClass("absolute", "left-0", "rounded-r-full");
     expect(indicators[0]).not.toHaveAttribute("style");
   });
 });
 
 describe("SidebarNav branding", () => {
-  it("renders the supplied full logo above the unchanged industrial brand card", () => {
-    const { container } = render(<SidebarNav />);
+  it("renders the supplied full logo in a light chip above the primary action", () => {
+    render(<SidebarNav />);
 
     const logo = screen.getByRole("img", { name: "Surfine Technology logo" });
-    expect(logo).toHaveAttribute("src", "/surfine-technology-logo.png");
-    expect(logo).toHaveClass("h-auto", "w-full", "max-w-[224px]", "object-contain");
-    expect(logo.parentElement).toHaveClass("pt-6", "pb-6");
+    expect(logo).toHaveAttribute("src", "/brand/surfine-horizontal.png");
+    expect(logo).toHaveClass("h-auto", "w-full", "object-contain");
 
-    const bottomImage = container.querySelector<HTMLImageElement>(
-      'img[src="/metal-forging-press.jpg"]',
-    );
-    expect(bottomImage).not.toBeNull();
-    expect(bottomImage).toHaveAttribute("alt", "");
-    expect(bottomImage).toHaveClass(
-      "absolute",
-      "inset-0",
-      "h-full",
-      "w-full",
-      "object-cover",
-      "object-center",
-    );
-    expect(screen.getByText("Precision in every detail.")).toBeInTheDocument();
-    expect(screen.getByText("For a stronger business tomorrow.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /new invoice/i })).toBeInTheDocument();
   });
 
-  it("keeps the complete logo contained when the sidebar is collapsed", () => {
+  it("keeps the logo contained and the actions reachable when the sidebar is collapsed", () => {
     useWorkspaceStore.setState({ sidebarCollapsed: true });
     render(<SidebarNav />);
 
     const logo = screen.getByRole("img", { name: "Surfine Technology logo" });
-    expect(logo).toHaveAttribute("src", "/surfine-technology-logo.png");
-    expect(logo).toHaveClass("h-auto", "w-12", "object-contain");
-    expect(logo.parentElement).toHaveClass("px-0");
+    expect(logo).toHaveAttribute("src", "/brand/surfine-emblem.png");
+    expect(logo).toHaveClass("h-auto", "object-contain", "w-9");
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
   });
 });

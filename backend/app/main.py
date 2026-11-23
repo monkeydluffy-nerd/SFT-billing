@@ -78,6 +78,30 @@ app.include_router(products.router)
 app.include_router(notifications.router)
 
 
+def _mount_frontend() -> None:
+    """Serve the built web UI from the same origin as the API (installed app)."""
+    from pathlib import Path
+    from fastapi import HTTPException
+    from fastapi.responses import FileResponse
+
+    static_dir = os.environ.get("SFT_BILLING_STATIC_DIR")
+    if not static_dir or not Path(static_dir).is_dir():
+        return
+    root = Path(static_dir).resolve()
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def spa(full_path: str):
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404)
+        candidate = (root / full_path).resolve()
+        if full_path and candidate.is_file() and root in candidate.parents:
+            return FileResponse(candidate)
+        return FileResponse(root / "index.html")
+
+
+_mount_frontend()
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="SFT Billing Backend")
     parser.add_argument("--port", type=int, default=8000, help="Port to run the server on")

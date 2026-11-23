@@ -7,7 +7,7 @@ export default function PinDrawing() {
       role="img"
       aria-label="Technical drawing of a precision pin, 10 millimetre diameter by 70 millimetre length"
     >
-      <g fill="none" stroke="#D8BE8F" strokeWidth="1.2" strokeLinejoin="round">
+      <g fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round">
         <path d="M20 110H500" strokeDasharray="14 3 2 3" strokeOpacity=".45" />
         <path className="sft-login__draw" pathLength={1} d="M60 72H96V148H60Z" />
         <path className="sft-login__draw" pathLength={1} d="M96 88H430L446 100V120L430 132H96" />
@@ -18,7 +18,7 @@ export default function PinDrawing() {
           <path className="sft-login__draw" pathLength={1} d="M446 88H486M446 132H486M478 88V132M473 88H483M473 132H483" />
         </g>
       </g>
-      <g fontFamily="Inter, 'Inter Variable', sans-serif" fontSize="12" fill="#D8BE8F" letterSpacing=".08em">
+      <g fontFamily="'Geist Variable', sans-serif" fontSize="12" fill="currentColor" letterSpacing=".08em">
         <text x="271" y="174" textAnchor="middle">70</text>
         <text x="492" y="114">Ø10</text>
       </g>

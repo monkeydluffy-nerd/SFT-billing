@@ -63,7 +63,7 @@ export function Dropdown({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         className={cn(
-          "flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-border-strong transition-colors duration-micro",
+          "flex items-center gap-2 rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-4 focus:ring-accent/15 transition-colors duration-micro",
           "disabled:cursor-not-allowed disabled:opacity-50",
           isOpen && "border-accent",
         )}
@@ -80,7 +80,7 @@ export function Dropdown({
 
       {isOpen && (
         <div
-          className="absolute right-0 top-full z-20 mt-1.5 min-w-[180px] max-h-60 overflow-y-auto rounded-md border border-border bg-surface-raised shadow-float-lg overflow-hidden animate-in fade-in-0 zoom-in-95 duration-micro"
+          className="absolute right-0 top-full z-20 mt-1.5 min-w-[180px] max-h-60 overflow-y-auto rounded-lg border border-border-strong bg-surface-raised shadow-float-lg overflow-hidden animate-in fade-in-0 zoom-in-95 duration-micro"
           role="listbox"
           aria-label={ariaLabel}
         >
