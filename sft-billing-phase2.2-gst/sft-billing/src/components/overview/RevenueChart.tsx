@@ -17,14 +17,14 @@ interface RevenueChartProps {
   series: MonthlyRevenuePoint[];
 }
 
+function trimZero(value: number): string {
+  return value.toFixed(1).replace(/\.0$/, "");
+}
+
 function formatAxisLabel(value: number): string {
-  if (value >= 100000) {
-    return `Rs ${(value / 100000).toFixed(1)}L`;
-  }
-  if (value >= 1000) {
-    return `Rs ${(value / 1000).toFixed(1)}K`;
-  }
-  return `Rs ${value}`;
+  if (value >= 100000) return `₹${trimZero(value / 100000)}L`;
+  if (value >= 1000) return `₹${trimZero(value / 1000)}K`;
+  return `₹${value}`;
 }
 
 function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: MonthlyRevenuePoint }> }) {
@@ -61,8 +61,6 @@ export function RevenueChart({ series }: RevenueChartProps) {
 
     return series.slice(startIdx, endIdx);
   }, [series, period, firstDataIndex]);
-
-  const latestPoint = data[data.length - 1];
 
   return (
     <section className="min-w-0" aria-labelledby="revenue-trend-title">
@@ -128,7 +126,7 @@ export function RevenueChart({ series }: RevenueChartProps) {
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  width={64}
+                  width={52}
                   tick={{ fill: "rgb(var(--color-ink-faint))", fontSize: 12 }}
                   tickFormatter={formatAxisLabel}
                 />
@@ -155,14 +153,6 @@ export function RevenueChart({ series }: RevenueChartProps) {
                 </Area>
               </AreaChart>
             </ResponsiveContainer>
-            {latestPoint && (
-              <div className="absolute top-4 right-4 z-10 pointer-events-none animate-fade-in">
-                <div className="rounded-md border border-border-strong bg-surface px-3 py-2 shadow-card min-w-[140px] text-center">
-                  <p className="text-xs text-ink-muted">{latestPoint.label}</p>
-                  <p className="font-tabular mt-0.5 text-sm font-medium text-ink">{formatCurrency(latestPoint.revenue)}</p>
-                </div>
-              </div>
-            )}
           </>
         )}
       </div>

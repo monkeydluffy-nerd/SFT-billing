@@ -10,6 +10,7 @@ import { InvoicePage } from "@/pages/InvoicePage";
 import { PaymentsPage } from "@/pages/PaymentsPage";
 import { ReportsPage } from "@/pages/ReportsPage";
 import { WorkspaceSettingsPage } from "@/pages/WorkspaceSettingsPage";
+import { UpdatesPage } from "@/pages/UpdatesPage";
 import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
@@ -121,16 +122,7 @@ export function App() {
   if (!isAuthenticated) {
     if (needsSetup === null) return null;
     if (needsSetup) return <SignUpPage logoSrc="/brand/surfine-horizontal.png" version="1.1.0" />;
-    return (
-      <LoginPage
-        logoSrc="/brand/surfine-horizontal.png"
-        version="1.1.0"
-        onSubmit={async (credentials) => {
-          const { login } = useAuthStore.getState();
-          await login(credentials.username, credentials.password);
-        }}
-      />
-    );
+    return <LoginPage logoSrc="/brand/surfine-horizontal.png" version="1.1.0" />;
   }
 
   const renderPage = () => {
@@ -152,6 +144,8 @@ export function App() {
         return <ReportsPage />;
       case "settings":
         return <WorkspaceSettingsPage />;
+      case "updates":
+        return <UpdatesPage />;
       case "overview":
       default:
         return <OverviewPage />;

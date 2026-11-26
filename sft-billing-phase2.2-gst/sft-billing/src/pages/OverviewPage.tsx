@@ -96,11 +96,11 @@ function OverviewPeriodControl({ filters, now, onChange }: OverviewPeriodControl
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={`Open reporting period controls for ${periodLabel}`}
-        className="flex items-center gap-3 rounded-lg border border-border-strong bg-surface/75 px-4 py-3 text-left shadow-card"
+        className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-2.5 text-left shadow-card transition-colors hover:border-border-strong"
       >
-        <CalendarDays size={17} strokeWidth={1.6} className="text-premium" aria-hidden />
+        <CalendarDays size={17} strokeWidth={1.6} className="text-accent" aria-hidden />
         <span>
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-faint">Reporting period</span>
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-faint">Reporting period</span>
           <span className="mt-0.5 block text-sm font-medium text-ink">{periodLabel}</span>
         </span>
         <ChevronDown size={15} strokeWidth={1.6} className={`ml-2 text-ink-faint transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
@@ -131,8 +131,8 @@ function OverviewIntro({ periodFilters, now, onPeriodChange }: { periodFilters: 
   return (
     <section className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
       <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">{today}</p>
-        <h1 className="mt-1.5 font-display text-2xl text-ink sm:text-[1.9rem]">
+        <p className="text-xs font-medium text-ink-faint">{today}</p>
+        <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-ink sm:text-[1.75rem]">
           {greetingFor(now)}{username ? `, ${username}` : ""}
         </h1>
         <p className="mt-1.5 max-w-xl text-sm text-ink-muted">
@@ -262,7 +262,8 @@ export function OverviewPage() {
   // Use direct values without count-up animation for static look
   const billedValue = periodBilled;
   const receivedValue = periodReceived;
-  const outstandingValue = allTotals?.pending.amount ?? 0;
+  const outstandingValue = (allTotals?.pending.amount ?? 0) + (allTotals?.overdue.amount ?? 0);
+  const outstandingCount = (allTotals?.pending.count ?? 0) + (allTotals?.overdue.count ?? 0);
   const overdueValue = allTotals?.overdue.amount ?? 0;
 
   if (invoicesError) {
@@ -278,12 +279,10 @@ export function OverviewPage() {
     );
   }
 
-  const pendingSubLine = allTotals?.pending.count
-    ? `${allTotals.pending.count} ${allTotals.pending.count === 1 ? "invoice" : "invoices"}`
-    : "No invoices";
-  const paidSubLine = allTotals?.paid.count
-    ? `${allTotals.paid.count} ${allTotals.paid.count === 1 ? "invoice" : "invoices"}`
-    : "No invoices";
+  const pendingSubLine = outstandingCount
+    ? `${outstandingCount} ${outstandingCount === 1 ? "invoice" : "invoices"} unpaid${overdueValue > 0 ? ` · ${formatCurrency(overdueValue)} overdue` : ""}`
+    : "No unpaid invoices";
+  const paidSubLine = `Payments in ${periodLabel}`;
   const overdueSubLine = allTotals?.overdue.count
     ? `${allTotals.overdue.count} ${allTotals.overdue.count === 1 ? "invoice" : "invoices"} · ${oldestOverdueDays}d oldest`
     : "No invoices";
@@ -292,10 +291,10 @@ export function OverviewPage() {
     : "No drafts";
 
   return (
-    <div className="min-h-full bg-canvas pb-[96px]">
+    <div className="min-h-full bg-canvas pb-16">
 
       <main className="relative isolate overflow-hidden">
-        <div className="relative mx-auto max-w-[1480px] px-5 pb-12 pt-6 sm:px-8 lg:px-6 lg:px-8">
+        <div className="relative mx-auto max-w-[1480px] px-6 pb-12 pt-8 lg:px-8">
           <OverviewIntro periodFilters={periodFilters} now={now} onPeriodChange={setPeriodFilters} />
 
           <ErrorBoundary
@@ -335,16 +334,15 @@ export function OverviewPage() {
                     <Card className="p-6">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
-                          <p className="text-xs font-medium text-ink-muted">Total revenue · {periodLabel}</p>
-                          <p className="mt-2 text-[2.6rem] font-semibold leading-none tracking-tight text-ink">
-                            <NumberTicker value={billedValue} format={(n) => formatCurrency(n)} duration={1.4} />
+                          <p className="text-xs font-medium uppercase tracking-[0.08em] text-ink-muted">Total billed · {periodLabel}</p>
+                          <p className="font-tabular mt-2 text-[2.4rem] font-semibold leading-none tracking-tight text-ink">
+                            <NumberTicker value={billedValue} format={(n) => formatCurrency(n)} duration={1.2} />
                           </p>
-                          <div className="mt-3 flex items-center gap-2">
-                            {comparable && changePct !== 0 ? <TrendPill pct={changePct} /> : null}
-                            <span className="text-xs text-ink-muted">
-                              {comparable && changePct !== 0 ? "vs previous period" : "No earlier period to compare"}
-                            </span>
-                          </div>
+                          <p className="mt-3 text-sm text-ink-muted">
+                            <span className="font-medium text-success">{formatCurrency(periodReceived)}</span> received
+                            <span className="mx-2 text-border-strong">|</span>
+                            <span className="font-medium text-ink">{formatCurrency(Math.max(0, periodBilled - periodReceived))}</span> still to collect
+                          </p>
                         </div>
                         <button
                           type="button"
@@ -354,7 +352,12 @@ export function OverviewPage() {
                           Open reports <ChevronRight size={13} aria-hidden />
                         </button>
                       </div>
-                      <div className="mt-6">
+                      <div className="mt-6 border-t border-border pt-5">
+                        {comparable && changePct !== 0 ? (
+                          <p className="mb-3 flex items-center gap-2 text-xs text-ink-muted">
+                            <TrendPill pct={changePct} /> collected this month vs last month
+                          </p>
+                        ) : null}
                         <RevenueChart series={revenueSeries} />
                       </div>
                     </Card>
@@ -385,7 +388,7 @@ export function OverviewPage() {
                 {/* Row 2: status KPIs */}
                 <BlurFade delay={0.08}>
                   <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
-                    <KpiCard label="Outstanding" tone="pending" value={outstandingValue} sub={pendingSubLine} active={overviewFocus === "pending"} onClick={() => focusOverviewStatus("pending")} />
+                    <KpiCard label="Outstanding (all unpaid)" tone="pending" value={outstandingValue} sub={pendingSubLine} active={overviewFocus === "pending"} onClick={() => focusOverviewStatus("pending")} />
                     <KpiCard label="Received" tone="success" value={receivedValue} sub={paidSubLine} active={overviewFocus === "paid"} onClick={() => focusOverviewStatus("paid")} delay={0.06} />
                     <KpiCard label="Overdue" tone="overdue" value={overdueValue} sub={overdueSubLine} active={overviewFocus === "overdue"} onClick={() => focusOverviewStatus("overdue")} delay={0.12} />
                     <KpiCard label="Drafts" tone="neutral" value={allTotals?.draft.amount ?? 0} sub={draftSubLine} active={overviewFocus === "draft"} onClick={() => focusOverviewStatus("draft")} delay={0.18} />

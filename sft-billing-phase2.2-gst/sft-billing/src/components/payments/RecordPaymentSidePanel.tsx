@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "
 import { X } from "lucide-react";
 import { Button } from "@/components/shared/Button";
 import { activeDataProvider } from "@/services";
-import { computeInvoiceTotals } from "@/lib/invoiceMath";
+import { computeInvoiceTotals, roundMoney } from "@/lib/invoiceMath";
 import { getClientName } from "@/lib/clientLookup";
 import { isSupportedPaymentProof, PAYMENT_PROOF_ACCEPT, PAYMENT_PROOF_INVALID_MESSAGE } from "@/lib/paymentProof";
 import { formatCurrency } from "@/lib/formatters";
@@ -94,7 +94,7 @@ export function RecordPaymentSidePanel({
 
     setPersistedPayment(paymentToReplace);
     setInvoiceId(paymentToReplace.invoiceId);
-    setAmount(String(paymentToReplace.amount));
+    setAmount(String(roundMoney(paymentToReplace.amount)));
     setMethod(paymentToReplace.method);
     setReference(paymentToReplace.reference ?? "");
     setProofFile(null);
@@ -131,7 +131,7 @@ export function RecordPaymentSidePanel({
     const invoice = billedInvoices.find((item) => item.id === id);
     if (invoice && !amount) {
       const outstanding = getOutstandingBalance(invoice);
-      if (outstanding > 0) setAmount(String(outstanding));
+      if (outstanding > 0) setAmount(String(roundMoney(outstanding)));
     }
   }
 
@@ -251,7 +251,7 @@ export function RecordPaymentSidePanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="record-payment-title"
@@ -261,7 +261,7 @@ export function RecordPaymentSidePanel({
         onClick={handleClose}
         aria-hidden="true"
       />
-      <div className="relative flex flex-col w-full max-w-lg h-full bg-surface shadow-float-lg border-l border-border animate-in slide-in-from-right duration-panel">
+      <div className="relative flex flex-col w-full max-w-md max-h-[calc(100vh-2rem)] overflow-hidden rounded-lg bg-surface shadow-float-lg border border-border animate-in fade-in zoom-in-95 duration-panel">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4 shrink-0">
           <h2 id="record-payment-title" className="font-display text-xl text-ink">
@@ -369,7 +369,7 @@ export function RecordPaymentSidePanel({
                   inputMode="decimal"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder={selectedInvoice ? String(computeInvoiceTotals(selectedInvoice).total) : "0"}
+                  placeholder={selectedInvoice ? String(roundMoney(computeInvoiceTotals(selectedInvoice).total)) : "0"}
                   disabled={isProofReplacement || submitting}
                   className={`font-tabular ${inputClass} ${errors.amount ? errorInputClass : ""}`}
                 />

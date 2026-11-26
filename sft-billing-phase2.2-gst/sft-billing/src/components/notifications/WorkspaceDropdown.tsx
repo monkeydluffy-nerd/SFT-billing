@@ -3,7 +3,6 @@ import { ChevronDown, Settings, Wrench, Monitor, LogOut } from "lucide-react";
 import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { cn } from "@/lib/cn";
-import { activeDataProvider } from "@/services";
 import { Modal } from "@/components/shared/Modal";
 
 interface WorkspaceDropdownProps {
@@ -15,7 +14,7 @@ export function WorkspaceDropdown({ businessName, monogram }: WorkspaceDropdownP
   const [open, setOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const { navigateTo, sidebarCollapsed, toggleSidebar, theme, toggleTheme } = useWorkspaceStore();
+  const { navigateTo, theme, toggleTheme } = useWorkspaceStore();
   const logout = useAuthStore((s) => s.logout);
 
   useEffect(() => {
@@ -37,19 +36,14 @@ export function WorkspaceDropdown({ businessName, monogram }: WorkspaceDropdownP
     };
   }, [open]);
 
-  async function handleCheckForUpdates() {
-    try {
-      await activeDataProvider.getBusinessProfile();
-    } catch {
-      // Ignore errors
-    }
+  function handleCheckForUpdates() {
+    navigateTo("updates");
   }
 
   const menuItems = [
     { label: "Workspace Settings", icon: Settings, action: () => navigateTo("settings") },
     { label: "Check for Updates", icon: Wrench, action: handleCheckForUpdates },
     { label: theme === "light" ? "Dark Mode" : "Light Mode", icon: Monitor, action: toggleTheme },
-    { label: sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar", icon: ChevronDown, action: toggleSidebar },
   ] as const;
 
   function handleLogout() {
@@ -128,16 +122,6 @@ export function WorkspaceDropdown({ businessName, monogram }: WorkspaceDropdownP
             </button>
           </div>
 
-          <div className="border-t border-border px-3 py-2">
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="flex w-full items-center gap-3 px-3 py-2 text-sm text-overdue hover:bg-overdue/10 hover:text-overdue rounded-md transition-colors"
-            >
-              <ChevronDown size={14} strokeWidth={1.7} aria-hidden />
-              <span>Close menu</span>
-            </button>
-          </div>
         </div>
       )}
 

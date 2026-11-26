@@ -15,7 +15,7 @@ import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
 import { activeDataProvider } from "@/services";
 import { resolveInvoiceDraft } from "@/lib/invoiceDraft";
 import { billInvoice } from "@/lib/invoiceLifecycle";
-import { computeInvoiceTotals, suggestRoundOff } from "@/lib/invoiceMath";
+import { computeInvoiceTotals, roundMoney, suggestRoundOff } from "@/lib/invoiceMath";
 import { validateInvoiceDraft, isDraftReadyToSend } from "@/lib/invoiceValidation";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { getClientName } from "@/lib/clientLookup";
@@ -48,7 +48,7 @@ export function CreateInvoicePage() {
   const [initializationError, setInitializationError] = useState<string | null>(null);
   const draftCandidate = useRef<Invoice | null>(null);
   const draftStarted = useRef(false);
-  const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
+  const [orderDetailsOpen, setOrderDetailsOpen] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -473,8 +473,8 @@ export function CreateInvoicePage() {
                     <input
                       type="number"
                       step={0.01}
-                      value={currentDraft.roundOff}
-                      onChange={(e) => handleRoundOffChange(Number(e.target.value))}
+                      value={roundMoney(currentDraft.roundOff)}
+                      onChange={(e) => handleRoundOffChange(roundMoney(Number(e.target.value)))}
                       className={numberInput}
                     />
                   </div>

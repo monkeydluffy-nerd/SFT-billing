@@ -231,7 +231,7 @@ export function ProductFormPanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex animate-in slide-in-from-right duration-panel"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-panel"
       role="dialog"
       aria-modal="true"
       aria-labelledby="product-form-title"
@@ -242,7 +242,7 @@ export function ProductFormPanel({
         onClick={handleBackdropClick}
         aria-hidden="true"
       />
-      <div className="relative flex flex-col w-full max-w-lg h-full bg-surface shadow-float-lg border-l border-border">
+      <div className="relative flex flex-col w-full max-w-md max-h-[calc(100vh-2rem)] overflow-hidden rounded-lg bg-surface shadow-float-lg border border-border">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4 shrink-0">
           <h2 id="product-form-title" className="font-display text-xl text-ink">

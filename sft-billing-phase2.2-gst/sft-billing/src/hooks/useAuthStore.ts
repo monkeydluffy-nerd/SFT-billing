@@ -53,8 +53,9 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticating: boolean;
-  login: (username: string, password: string, remember?: boolean) => Promise<void>;
-  register: (input: { username: string; mobile: string; password: string }) => Promise<void>;
+  /** `beforeCommit` runs after the server accepts the credentials and before the app opens (used by the login animation). */
+  login: (username: string, password: string, remember?: boolean, beforeCommit?: () => Promise<void>) => Promise<void>;
+  register: (input: { username: string; mobile: string; password: string }, beforeCommit?: () => Promise<void>) => Promise<void>;
   logout: () => Promise<void>;
   setAuthenticating: (authenticating: boolean) => void;
   checkAuth: () => Promise<boolean>;
@@ -93,7 +94,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticating: false,
 
-      login: async (username: string, password: string, remember = false) => {
+      login: async (username: string, password: string, remember = false, beforeCommit?: () => Promise<void>) => {
         set({ isAuthenticating: true });
         try {
           const baseUrl = await getApiBaseUrl();
@@ -107,6 +108,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(body.detail ?? res.statusText ?? "Login failed.");
           }
           const data = await res.json();
+          if (beforeCommit) await beforeCommit();
           set({
             isAuthenticated: true,
             user: data.user,
@@ -119,7 +121,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async ({ username, mobile, password }) => {
+      register: async ({ username, mobile, password }, beforeCommit) => {
         set({ isAuthenticating: true });
         try {
           const baseUrl = await getApiBaseUrl();
@@ -133,6 +135,7 @@ export const useAuthStore = create<AuthState>()(
             const detail = Array.isArray(body.detail) ? body.detail[0]?.msg : body.detail;
             throw new Error(detail ?? "Could not create the account.");
           }
+          if (beforeCommit) await beforeCommit();
           set({ isAuthenticated: true, user: body.user, token: body.token, isAuthenticating: false });
         } catch (error) {
           set({ isAuthenticating: false });

@@ -12,6 +12,7 @@ export type AppPage =
   | "reports"
   | "intelligence"
   | "settings"
+  | "updates"
   | "invoice-detail";
 
 export interface PaymentReceiptReturnState {

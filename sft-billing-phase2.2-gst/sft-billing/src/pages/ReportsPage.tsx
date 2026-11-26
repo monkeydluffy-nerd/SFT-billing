@@ -47,7 +47,9 @@ import {
 } from "@/lib/intelligence";
 import { getComparablePeriodWindow } from "@/lib/periodComparison";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { downloadCsv } from "@/lib/csvExport";
+import { downloadCsvRows } from "@/lib/csvExport";
+import { downloadStyledWorkbook, sheetsToCsvRows, type SheetSpec } from "@/lib/xlsxWorkbook";
+import { buildSalesRegisterSheets, buildSupplyLedgerSheets, buildTableSheet, formatDotDate } from "@/lib/reportExports";
 import { Toast } from "@/components/shared/Toast";
 import { PulseStat } from "@/components/intelligence/PulseStat";
 import { AttentionList } from "@/components/intelligence/AttentionList";
@@ -135,8 +137,49 @@ export function ReportsPage() {
 
   const activeDefinition = REPORT_DEFINITIONS.find((r) => r.id === reportId)!;
 
+  /** The sheets for the current report, laid out like the company's own workbooks. */
+  function currentReportSheets(): { slug: string; sheets: SheetSpec[] } {
+    const allPayments = payments ?? [];
+    const allClients = clients ?? [];
+    switch (reportId) {
+      case "invoices":
+        return { slug: "sales-register", sheets: buildSalesRegisterSheets(filteredInvoices, allPayments, allClients) };
+      case "client-summary":
+        return { slug: "supply-vs-payment-receipt", sheets: buildSupplyLedgerSheets(filteredInvoices, allPayments, allClients, "all", now) };
+      case "outstanding":
+        return { slug: "outstanding-supply-vs-payment", sheets: buildSupplyLedgerSheets(filteredInvoices, allPayments, allClients, "outstanding", now) };
+      case "overdue":
+        return { slug: "overdue-supply-vs-payment", sheets: buildSupplyLedgerSheets(filteredInvoices, allPayments, allClients, "overdue", now) };
+      case "payments":
+        return {
+          slug: "payment-report",
+          sheets: [
+            buildTableSheet(
+              "Payments",
+              ["Payment", "Invoice", "Client", "Date", "Amount", "Method"],
+              paymentRows.map((r) => [r.id, r.invoiceNumber, r.clientName, formatDotDate(r.receivedAt), r.amount, METHOD_LABELS[r.method] ?? r.method]),
+              [4],
+              [4],
+            ),
+          ],
+        };
+      case "revenue":
+      default:
+        return {
+          slug: "revenue-report",
+          sheets: buildSalesRegisterSheets(filteredInvoices, allPayments, allClients, { withPaymentSummary: true }),
+        };
+    }
+  }
+
   function handleExportExcel() {
-    setToast("Report-level Excel export isn't available yet. Try CSV export, or use Download Invoice for a single invoice.");
+    const { slug, sheets } = currentReportSheets();
+    if (sheets.length === 0) {
+      setToast("Nothing to export - this report has no rows for the selected filters.");
+      return;
+    }
+    downloadStyledWorkbook(`${slug}.xlsx`, sheets);
+    setToast("Excel report downloaded.");
   }
 
   function handlePrint() {
@@ -144,54 +187,12 @@ export function ReportsPage() {
   }
 
   function handleExportCsv() {
-    switch (reportId) {
-      case "invoices":
-        downloadCsv(
-          "invoice-report.csv",
-          ["Invoice", "Client", "Date", "Due date", "Amount", "Status"],
-          invoiceRows.map((r) => [r.number, r.clientName, formatDate(r.issueDate), formatDate(r.dueDate), r.amount, r.status]),
-        );
-        break;
-      case "payments":
-        downloadCsv(
-          "payment-report.csv",
-          ["Payment", "Invoice", "Client", "Date", "Amount", "Method"],
-          paymentRows.map((r) => [r.id, r.invoiceNumber, r.clientName, formatDate(r.receivedAt), r.amount, METHOD_LABELS[r.method] ?? r.method]),
-        );
-        break;
-      case "outstanding":
-        downloadCsv(
-          "outstanding-report.csv",
-          ["Client", "Invoice", "Total", "Paid", "Outstanding", "Due date", "Status"],
-          outstandingRows.map((r) => [r.clientName, r.invoiceNumber, r.total, r.paid, r.outstanding, formatDate(r.dueDate), r.status]),
-        );
-        break;
-      case "overdue":
-        downloadCsv(
-          "overdue-report.csv",
-          ["Client", "Invoice", "Total", "Paid", "Outstanding", "Due date"],
-          overdueRows.map((r) => [r.clientName, r.invoiceNumber, r.total, r.paid, r.outstanding, formatDate(r.dueDate)]),
-        );
-        break;
-      case "client-summary":
-        downloadCsv(
-          "client-summary-report.csv",
-          ["Client", "Invoices", "Total billed", "Total received", "Outstanding"],
-          clientSummaryRows.map((r) => [r.clientName, r.invoiceCount, r.totalBilled, r.totalCollected, r.outstanding]),
-        );
-        break;
-      case "revenue":
-        downloadCsv(
-          "revenue-report.csv",
-          ["Metric", "Value"],
-          [
-            ["Billed", revenueSummary.billed],
-            ["Received", revenueSummary.collected],
-            ["Outstanding", revenueSummary.outstanding],
-          ],
-        );
-        break;
+    const { slug, sheets } = currentReportSheets();
+    if (sheets.length === 0) {
+      setToast("Nothing to export - this report has no rows for the selected filters.");
+      return;
     }
+    downloadCsvRows(`${slug}.csv`, sheetsToCsvRows(sheets));
     setToast("CSV export downloaded.");
   }
 

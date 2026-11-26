@@ -9,7 +9,6 @@ interface ReportFiltersProps {
   onChange: (next: ReportFilterState) => void;
   clients: Client[] | undefined;
   asOf?: Date;
-  onExcludeTestDataChange?: (exclude: boolean) => void;
 }
 
 // Shared filter data is intentionally exported alongside this component.
@@ -34,7 +33,6 @@ export function ReportFilters({
   onChange,
   clients,
   asOf,
-  onExcludeTestDataChange,
 }: ReportFiltersProps) {
   function selectPreset(preset: DatePreset) {
     if (preset === "custom") {
@@ -106,17 +104,6 @@ export function ReportFilters({
         placeholder="All statuses"
         ariaLabel="Filter by status"
       />
-
-      {/* Exclude Test Data Toggle */}
-      <label className="flex h-10 items-center gap-2 rounded-full border border-border-strong bg-surface px-4 text-sm text-ink-muted cursor-pointer hover:border-accent transition-colors duration-micro">
-        <input
-          type="checkbox"
-          checked={true}
-          onChange={(e) => onExcludeTestDataChange?.(e.target.checked)}
-          className="rounded border-border text-accent focus:ring-accent focus:ring-2"
-        />
-        <span>Exclude test data</span>
-      </label>
     </div>
   );
 }

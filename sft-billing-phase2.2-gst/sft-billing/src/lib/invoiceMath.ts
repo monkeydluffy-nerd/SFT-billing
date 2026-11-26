@@ -36,6 +36,13 @@ export function getInvoiceStatus(invoice: Invoice, asOf: Date = new Date()): Inv
   };
 }
 
+/** Rounds a money amount to whole paise, removing float noise like 3.999999229. */
+export function roundMoney(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  const rounded = Math.round((value + Number.EPSILON) * 100) / 100;
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
 export interface InvoiceTotals {
   subtotal: number;
   cgstAmount: number;
@@ -74,7 +81,7 @@ export function computeInvoiceTotals(
  * applied automatically (round-off is a user decision, not a silent one).
  */
 export function suggestRoundOff(rawTotal: number): number {
-  return Math.round(rawTotal) - rawTotal;
+  return roundMoney(Math.round(rawTotal) - rawTotal);
 }
 
 /**

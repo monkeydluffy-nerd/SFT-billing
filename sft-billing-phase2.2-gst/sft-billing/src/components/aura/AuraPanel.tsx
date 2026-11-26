@@ -89,7 +89,7 @@ export function AuraPanel() {
             exit={{ opacity: 0, scale: 0.96 }}
             transition={{ duration: 0.18 }}
             className={cn(
-              "print:hidden fixed right-6 z-40 flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2.5 text-sm font-medium text-premium shadow-float transition-colors duration-micro hover:border-premium/40",
+              "print:hidden fixed right-4 z-40 flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-premium shadow-float transition-colors duration-micro hover:border-premium/40",
               bottomOffsetClass,
             )}
             aria-label="Open AURA, the financial workspace assistant"
@@ -100,7 +100,7 @@ export function AuraPanel() {
               )}
               <span className={cn("relative inline-flex h-2 w-2 rounded-full", hasInsight ? "bg-premium" : "bg-border-strong")} />
             </span>
-            <Sparkles size={14} aria-hidden />
+            <Sparkles size={12} aria-hidden />
             AURA
           </motion.button>
         )}
@@ -115,7 +115,7 @@ export function AuraPanel() {
             exit={{ opacity: 0, scale: 0.98, y: 8 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
             className={cn(
-              "print:hidden fixed right-6 z-40 flex h-[520px] w-[380px] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-lg border border-border bg-surface-raised shadow-float-lg",
+              "print:hidden fixed right-4 z-40 flex h-[440px] w-[330px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border border-border bg-surface-raised shadow-float-lg",
               bottomOffsetClass,
             )}
             role="dialog"

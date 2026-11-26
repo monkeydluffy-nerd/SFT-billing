@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Printer, Send, BellRing, IndianRupee, Maximize2, Minimize2 } from "lucide-react";
+import { Send, BellRing, IndianRupee, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/shared/Button";
 import { ExportDropdown } from "./ExportDropdown";
 import { SendInvoiceModal } from "./SendInvoiceModal";
@@ -15,7 +15,6 @@ interface ActionToolbarProps {
   onSent: () => void;
   onReminderSent: () => void;
   onPaymentRecorded: () => void;
-  onPrint: () => void;
   onExpandPreview: () => void;
   isPreviewExpanded: boolean;
 }
@@ -27,7 +26,6 @@ export function ActionToolbar({
   onSent,
   onReminderSent,
   onPaymentRecorded,
-  onPrint,
   onExpandPreview,
   isPreviewExpanded,
 }: ActionToolbarProps) {
@@ -55,10 +53,6 @@ export function ActionToolbar({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <ExportDropdown invoice={invoice} />
-      <Button variant="secondary" onClick={onPrint} aria-label="Print invoice">
-        <Printer size={14} />
-        <span className="hidden sm:inline">Print</span>
-      </Button>
       <Button onClick={() => setSendOpen(true)}>
         <Send size={14} />
         <span className="hidden sm:inline">{invoice.sentAt ? "Resend invoice" : "Send invoice"}</span>

@@ -96,11 +96,10 @@ export function NotificationBell() {
       >
         <Bell size={16} strokeWidth={1.6} aria-hidden />
         {unreadCount > 0 && (
-          <span className="live-dot absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-premium" aria-hidden="true" />
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-overdue text-[10px] font-medium text-overdue-ink">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
         )}
-        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-overdue text-[10px] font-medium text-overdue-ink">
-          {unreadCount > 99 ? "99+" : unreadCount}
-        </span>
       </button>
 
       {open && (

@@ -6,8 +6,6 @@ import {
   Pencil,
   Trash2,
   MoreHorizontal,
-  ChevronDown,
-  ArrowUpDown,
   X,
   Copy,
   Tag,
@@ -20,6 +18,7 @@ import { Skeleton } from "@/components/shared/SkeletonLoader";
 import { Toast } from "@/components/shared/Toast";
 import { ProductFormPanel } from "@/components/products/ProductFormPanel";
 import { Modal } from "@/components/shared/Modal";
+import { Dropdown } from "@/components/shared/Dropdown";
 import { Button } from "@/components/shared/Button";
 import { useCatalogProducts } from "@/hooks/useCatalogProducts";
 import { useInvoices } from "@/hooks/useInvoices";
@@ -359,18 +358,18 @@ export function ProductsPage() {
           </div>
 
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setSortBy(sortBy === "code" ? "name" : sortBy === "name" ? "price" : sortBy === "price" ? "recent" : "code")}
-              className="flex h-10 items-center gap-2 rounded-full border border-border-strong bg-surface px-4 text-sm font-medium text-ink transition-colors hover:border-accent"
-              aria-haspopup="listbox"
-              aria-expanded={false}
-              aria-label="Sort products"
-            >
-              <ArrowUpDown size={14} className="text-ink-muted" aria-hidden />
-              <span className="truncate">{sortBy === "code" ? "Sort: Code" : sortBy === "name" ? "Sort: Name" : sortBy === "price" ? "Sort: Price" : "Sort: Recent"}</span>
-              <ChevronDown size={14} className="text-ink-muted" aria-hidden />
-            </button>
+            <Dropdown
+              value={sortBy}
+              onChange={(value) => setSortBy(value as "code" | "name" | "price" | "recent")}
+              options={[
+                { value: "code", label: "Sort: Code" },
+                { value: "name", label: "Sort: Name" },
+                { value: "price", label: "Sort: Price" },
+                { value: "recent", label: "Sort: Recent" },
+              ]}
+              ariaLabel="Sort products"
+              className="[&>button]:h-10 [&>button]:rounded-full [&>button]:px-4 [&>button]:font-medium"
+            />
 
             <button
               type="button"

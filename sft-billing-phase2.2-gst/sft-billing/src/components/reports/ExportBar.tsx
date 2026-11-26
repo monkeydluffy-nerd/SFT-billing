@@ -7,20 +7,15 @@ interface ExportBarProps {
   onPrint: () => void;
 }
 
-/**
- * CSV and Print work entirely client-side. Excel export for REPORTS isn't
- * wired to a generator yet (the per-invoice download is real and lives on
- * the invoice page), so it stays disabled with an explanatory tooltip.
- */
+/** CSV, Excel and Print all work client-side from the rows currently on screen. */
 export function ExportBar({ onExportExcel, onExportCsv, onPrint }: ExportBarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="print:hidden flex flex-wrap items-center gap-2">
       <Button
         variant="secondary"
         size="sm"
         onClick={onExportExcel}
-        title="Report-level Excel export isn't available yet - use CSV export or the per-invoice Download Invoice action"
-        disabled
+        title="Download this report as an Excel workbook"
       >
         <FileSpreadsheet size={13} aria-hidden />
         Export Excel

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "
 import { Modal } from "@/components/shared/Modal";
 import { Button } from "@/components/shared/Button";
 import { activeDataProvider } from "@/services";
-import { computeInvoiceTotals } from "@/lib/invoiceMath";
+import { computeInvoiceTotals, roundMoney } from "@/lib/invoiceMath";
 import { getClientName } from "@/lib/clientLookup";
 import { isSupportedPaymentProof, PAYMENT_PROOF_ACCEPT, PAYMENT_PROOF_INVALID_MESSAGE } from "@/lib/paymentProof";
 import type {
@@ -97,7 +97,7 @@ export function RecordPaymentModal({
 
     setPersistedPayment(paymentToReplace);
     setInvoiceId(paymentToReplace.invoiceId);
-    setAmount(String(paymentToReplace.amount));
+    setAmount(String(roundMoney(paymentToReplace.amount)));
     setMethod(paymentToReplace.method);
     setReference(paymentToReplace.reference ?? "");
     setProofFile(null);
@@ -129,7 +129,7 @@ export function RecordPaymentModal({
     setErrors((previous) => ({ ...previous, invoiceId: undefined }));
     const invoice = billedInvoices.find((item) => item.id === id);
     if (invoice && !amount) {
-      setAmount(String(computeInvoiceTotals(invoice).total));
+      setAmount(String(roundMoney(computeInvoiceTotals(invoice).total)));
     }
   }
 
@@ -306,7 +306,7 @@ export function RecordPaymentModal({
             inputMode="decimal"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            placeholder={selectedInvoice ? String(computeInvoiceTotals(selectedInvoice).total) : "0"}
+            placeholder={selectedInvoice ? String(roundMoney(computeInvoiceTotals(selectedInvoice).total)) : "0"}
             disabled={isProofReplacement || submitting}
             className={`font-tabular ${inputClass} ${errors.amount ? errorInputClass : ""}`}
           />

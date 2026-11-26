@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, Inbox, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Inbox, AlertTriangle, Printer, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/shared/Button";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -15,6 +15,8 @@ import { usePayments } from "@/hooks/usePayments";
 import { useClients } from "@/hooks/useClients";
 import { useBusinessProfile } from "@/hooks/useBusinessProfile";
 import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
+import { activeDataProvider } from "@/services";
+import { printPdfBlob } from "@/lib/printPdf";
 import { computeInvoiceTotals, getInvoiceLedgerStatus } from "@/lib/invoiceMath";
 
 /** Invoice detail shows billing actions and ledger information, not a separate invoice rendering. */
@@ -36,6 +38,22 @@ export function InvoicePage() {
   const { selectedInvoiceId, goToInvoices, openCreateInvoice, navigateToPaymentReceipt } = useWorkspaceStore();
 
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const [printError, setPrintError] = useState<string | null>(null);
+
+  async function handlePrint() {
+    if (!selectedInvoiceId || printing) return;
+    setPrinting(true);
+    setPrintError(null);
+    try {
+      const { blob } = await activeDataProvider.getInvoicePdf(selectedInvoiceId);
+      await printPdfBlob(blob);
+    } catch (caught) {
+      setPrintError(caught instanceof Error ? caught.message : "Couldn't print the invoice.");
+    } finally {
+      setPrinting(false);
+    }
+  }
 
   // The selected stable id is the only resolution key. This deliberately does
   // not fall back to a first item, filtered invoice list, or display number.
@@ -126,11 +144,22 @@ export function InvoicePage() {
         <PageHeader
           title="Invoice"
           action={
-            <Button variant="secondary" onClick={() => goToInvoices()}>
-              <ArrowLeft size={14} /> Back to invoices
-            </Button>
+            <>
+              <Button variant="secondary" onClick={() => goToInvoices()}>
+                <ArrowLeft size={14} /> Back to invoices
+              </Button>
+              <Button variant="secondary" onClick={() => void handlePrint()} disabled={printing} aria-label="Print invoice">
+                {printing ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
+                Print
+              </Button>
+            </>
           }
         />
+        {printError && (
+          <p role="alert" className="px-6 pb-2 text-sm text-overdue lg:px-8">
+            {printError}
+          </p>
+        )}
       </div>
 
       <div className="space-y-5 px-6 pb-10 lg:px-8 print:px-0 print:py-0">
@@ -168,7 +197,6 @@ export function InvoicePage() {
               reloadInvoices();
               reloadPayments();
             }}
-            onPrint={() => window.print()}
             onExpandPreview={() => setIsPreviewExpanded((prev) => !prev)}
             isPreviewExpanded={isPreviewExpanded}
           />

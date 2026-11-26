@@ -1,17 +1,17 @@
 /**
- * SFT Billing design tokens — Vtron theme (shadcnblocks / tweakcn).
- * Palette, radius (1.3rem) and Open Sans come from the Vtron theme registry,
- * converted from oklch to RGB triples so Tailwind's
- * `rgb(var(--x) / <alpha-value>)` can apply opacity. Status colors carry
- * financial meaning only.
+ * SFT Billing design tokens - clean modern light theme.
+ * Soft cool-grey page, white cards with hairline borders, Surfine brand navy
+ * and blue as the only accents, Inter type. Colours are RGB triples so
+ * Tailwind's `rgb(var(--x) / <alpha-value>)` can apply opacity. Status
+ * colours carry financial meaning only.
  */
 
 :root {
   color-scheme: light;
 
-  --color-canvas: 252 252 252;
+  --color-canvas: 245 247 251;
   --color-header: 255 255 255;
-  --color-surface: 250 250 250;
+  --color-surface: 255 255 255;
   --color-surface-raised: 255 255 255;
   --color-chart-billed: 46 103 255;
   --color-chart-received: 0 238 186;
@@ -20,11 +20,11 @@
   --color-sidebar-muted: 152 160 192;
   --color-sidebar-border: 38 47 86;
   --color-ink: 14 20 43;
-  --color-ink-muted: 104 108 122;
-  --color-ink-faint: 162 164 173;
-  --color-border: 231 228 228;
-  --color-border-strong: 204 204 204;
-  --color-accent: 46 103 255;
+  --color-ink-muted: 86 94 117;
+  --color-ink-faint: 148 155 175;
+  --color-border: 228 232 241;
+  --color-border-strong: 203 210 225;
+  --color-accent: 38 94 242;
   --color-accent-ink: 255 255 255;
   --color-premium: 255 108 53;
   --color-premium-bg: 255 237 231;
@@ -42,17 +42,17 @@
   --color-neutral-bg: 233 233 235;
 
   /* Type */
-  --font-display: "Open Sans Variable", "Open Sans", "Segoe UI", system-ui, sans-serif;
-  --font-sans: "Open Sans Variable", "Open Sans", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Inter Variable", "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Inter", "Segoe UI", system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, Menlo, Consolas, monospace;
 
-  /* Structure — Vtron radius is 1.3rem */
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 1.3rem;
+  /* Structure - restrained, consistent corners */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
 
   /* Depth */
-  --shadow-card: none;
+  --shadow-card: 0 1px 2px rgb(14 20 43 / 0.04), 0 1px 3px rgb(14 20 43 / 0.03);
   --shadow-float: 0 12px 32px -12px rgb(14 20 43 / 0.18), 0 2px 6px -2px rgb(14 20 43 / 0.06);
   --shadow-float-lg: 0 30px 64px -20px rgb(14 20 43 / 0.30), 0 4px 12px -4px rgb(14 20 43 / 0.08);
 

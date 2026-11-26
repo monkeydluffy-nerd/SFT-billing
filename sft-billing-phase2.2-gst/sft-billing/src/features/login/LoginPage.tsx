@@ -1,9 +1,8 @@
 import { FormEvent, useId, useState } from "react";
 import { useAuthStore } from "@/hooks/useAuthStore";
-import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
 import { getApiBaseUrl } from "@/services/backendPort";
-import LoginShowcase from "./LoginShowcase";
-import { ArrowRight, Eye, EyeOff, Lock, Moon, ShieldCheck, Sun, User } from "lucide-react";
+import LoginShowcase, { useRouteSignIn } from "./LoginShowcase";
+import { ArrowRight, Eye, EyeOff, Lock, User } from "lucide-react";
 import { ForgotPasswordModal } from "./forgot-password";
 import "./login.css";
 import "./forgot-password/forgot-password.css";
@@ -22,7 +21,7 @@ export interface LoginPageProps {
   loading?: boolean;
 }
 
-export default function LoginPage({ logoSrc, version, error, loading, onSubmit }: LoginPageProps) {
+export default function LoginPage({ version, error, loading, onSubmit }: LoginPageProps) {
   const uid = useId();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -35,8 +34,7 @@ export default function LoginPage({ logoSrc, version, error, loading, onSubmit }
   const message = error ?? localError;
 
   const { login } = useAuthStore();
-  const theme = useWorkspaceStore((st) => st.theme);
-  const toggleTheme = useWorkspaceStore((st) => st.toggleTheme);
+  const route = useRouteSignIn();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -47,13 +45,16 @@ export default function LoginPage({ logoSrc, version, error, loading, onSubmit }
     }
     setLocalError(null);
     setBusy(true);
+    // the part sets off down the route; on success it is carried to Deliver before the app opens
+    route.begin();
     try {
       if (onSubmit) {
         await onSubmit({ username: username.trim(), password });
       } else {
-        await login(username.trim(), password);
+        await login(username.trim(), password, false, route.deliver);
       }
     } catch (err) {
+      route.reset();
       setLocalError(err instanceof Error ? err.message : "Invalid username or password.");
     } finally {
       setBusy(false);
@@ -95,22 +96,11 @@ export default function LoginPage({ logoSrc, version, error, loading, onSubmit }
   return (
     <div className="sft-login">
       <section className="sl-panel">
-        <div className="sl-panel__top">
-          <div className="sl-logo">
-            <img src={logoSrc} alt="Surfine Technology" />
-          </div>
-          <button type="button" className="sl-theme" onClick={toggleTheme} aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}>
-            {theme === "light" ? <Moon size={14} aria-hidden /> : <Sun size={14} aria-hidden />}
-            {theme === "light" ? "Dark" : "Light"}
-          </button>
-        </div>
-
         <div className="sl-formwrap">
           <form className="sl-form" onSubmit={handleSubmit} noValidate>
-            <span className="sl-hello"><i /> SFT Billing</span>
             <div>
               <h1 className="sl-title">Welcome back</h1>
-              <p className="sl-subtitle">Sign in to your workspace to manage invoices, clients and payments.</p>
+              <p className="sl-subtitle">Sign in to your workspace.</p>
             </div>
 
             <div>
@@ -171,7 +161,6 @@ export default function LoginPage({ logoSrc, version, error, loading, onSubmit }
                 {isLoading ? "Signing in" : "Sign in"}
                 {!isLoading && <ArrowRight size={17} aria-hidden />}
               </button>
-              <p className="sl-secure"><ShieldCheck size={13} aria-hidden /> Your data stays on this device</p>
             </div>
           </form>
         </div>
@@ -179,7 +168,7 @@ export default function LoginPage({ logoSrc, version, error, loading, onSubmit }
         <p className="sl-footer">SFT Billing · v{version} · © Surfine Technology</p>
       </section>
 
-      <LoginShowcase />
+      <LoginShowcase forcedStep={route.forcedStep} />
 
       <ForgotPasswordModal
         open={recoveryOpen}

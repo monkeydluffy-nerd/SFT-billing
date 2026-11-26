@@ -60,6 +60,38 @@ describe("useAuthStore backend authentication", () => {
     });
   });
 
+  it("waits for beforeCommit after the server accepts the login, and opens the app only afterwards", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({
+        token: "session-token",
+        user: { id: "user-1", username: "admin", is_admin: true, created_at: "2026-01-01T00:00:00Z", last_login_at: null },
+      }),
+    );
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const seen: boolean[] = [];
+
+    const pending = useAuthStore.getState().login("admin", "correct-password", false, async () => {
+      seen.push(useAuthStore.getState().isAuthenticated);
+      await held;
+    });
+    await vi.waitFor(() => expect(seen).toEqual([false]));
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+
+    release();
+    await pending;
+    expect(useAuthStore.getState()).toMatchObject({ isAuthenticated: true, token: "session-token" });
+  });
+
+  it("does not run beforeCommit when the backend rejects credentials", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ detail: "Invalid username or password" }, 401));
+    const hook = vi.fn().mockResolvedValue(undefined);
+    await expect(useAuthStore.getState().login("admin", "nope", false, hook)).rejects.toThrow();
+    expect(hook).not.toHaveBeenCalled();
+  });
+
   it("does not authenticate when the backend rejects credentials", async () => {
     vi.mocked(fetch).mockResolvedValue(
       jsonResponse({ detail: "Invalid username or password" }, 401),

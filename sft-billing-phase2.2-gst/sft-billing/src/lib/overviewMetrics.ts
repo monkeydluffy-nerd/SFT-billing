@@ -1,5 +1,5 @@
 import type { Invoice, InvoiceStatus, Payment } from "@/types";
-import { getInvoiceStatus, getInvoiceWorkflowStatus, computeInvoiceTotals } from "./invoiceMath";
+import { getInvoiceStatus, getInvoiceWorkflowStatus, computeInvoiceTotals, roundMoney } from "./invoiceMath";
 import { monthKey, monthLabel } from "@/data/dateHelpers";
 import {
   getInvoiceOutstandingBalance,
@@ -114,7 +114,7 @@ export function computeMonthlyRevenueSeries(invoices: Invoice[], monthsBack = 12
     }
   }
 
-  return Array.from(buckets.values());
+  return Array.from(buckets.values()).map((point) => ({ ...point, revenue: roundMoney(point.revenue) }));
 }
 
 /**
@@ -144,7 +144,7 @@ export function computeMonthlyPaymentRevenueSeries(
     if (bucket) bucket.revenue += payment.amount;
   }
 
-  return Array.from(buckets.values());
+  return Array.from(buckets.values()).map((point) => ({ ...point, revenue: roundMoney(point.revenue) }));
 }
 
 export function revenueForCurrentMonth(series: MonthlyRevenuePoint[]): { current: number; previous: number; changePct: number } {

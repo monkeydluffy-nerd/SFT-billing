@@ -11,9 +11,18 @@
     height: 100%;
   }
 
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+
+  html {
+    background-color: rgb(var(--color-sidebar, 17 24 39));
+  }
+
   body {
     @apply bg-canvas text-ink font-sans antialiased;
-    font-feature-settings: "cv11", "ss01";
+    font-feature-settings: "calt", "cv05";
     text-rendering: optimizeLegibility;
   }
 

@@ -52,16 +52,16 @@ export function KpiCard({
 }) {
   const { icon: Icon, chip } = KPI_TONES[tone];
   return (
-    <SpotlightCard className={cn("rounded-xl border bg-surface transition-colors", active ? "border-accent" : "border-border hover:border-border-strong")}>
+    <SpotlightCard className={cn("rounded-xl border bg-surface shadow-card transition-colors", active ? "border-accent ring-1 ring-accent/30" : "border-border hover:border-border-strong")}>
       <button type="button" onClick={onClick} aria-pressed={active} className="block w-full p-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
         <div className="flex items-center justify-between">
-          <span className={cn("flex h-9 w-9 items-center justify-center rounded-full", chip)}>
+          <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg", chip)}>
             <Icon size={16} aria-hidden />
           </span>
           <ChevronRight size={15} className="text-ink-faint" aria-hidden />
         </div>
         <p className="mt-4 text-xs font-medium text-ink-muted">{label}</p>
-        <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+        <p className="font-tabular mt-1 text-2xl font-semibold tracking-tight text-ink">
           <NumberTicker value={value} format={(n) => formatCurrency(n)} delay={delay} />
         </p>
         <p className="mt-1 truncate text-xs text-ink-faint">{sub}</p>
@@ -143,7 +143,7 @@ export function AttentionList({ items, onOpen, onViewAll }: { items: AttentionIt
                 onClick={() => onOpen(item.id)}
                 className="group flex w-full items-center gap-3 py-3 text-left outline-none focus-visible:bg-canvas"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-overdue-bg text-xs font-semibold text-overdue">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-overdue-bg text-xs font-semibold text-overdue">
                   {item.daysOverdue}d
                 </span>
                 <span className="min-w-0 flex-1">

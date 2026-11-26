@@ -1,15 +1,14 @@
 import { FormEvent, useId, useState } from "react";
 import { useAuthStore } from "@/hooks/useAuthStore";
-import { useWorkspaceStore } from "@/hooks/useWorkspaceStore";
-import LoginShowcase from "./LoginShowcase";
-import { ArrowRight, Eye, EyeOff, Lock, Moon, Phone, ShieldCheck, Sun, User } from "lucide-react";
+import LoginShowcase, { useRouteSignIn } from "./LoginShowcase";
+import { ArrowRight, Eye, EyeOff, Lock, Phone, User } from "lucide-react";
 import "./login.css";
 import "./fonts";
 
 const MIN_PASSWORD = 8;
 
 /** Shown once, on the first launch after installation, until an account exists. */
-export default function SignUpPage({ logoSrc, version }: { logoSrc: string; version: string }) {
+export default function SignUpPage({ version }: { logoSrc?: string; version: string }) {
   const uid = useId();
   const [username, setUsername] = useState("");
   const [mobile, setMobile] = useState("");
@@ -20,8 +19,7 @@ export default function SignUpPage({ logoSrc, version }: { logoSrc: string; vers
   const [error, setError] = useState<string | null>(null);
 
   const register = useAuthStore((st) => st.register);
-  const theme = useWorkspaceStore((st) => st.theme);
-  const toggleTheme = useWorkspaceStore((st) => st.toggleTheme);
+  const route = useRouteSignIn();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -33,9 +31,11 @@ export default function SignUpPage({ logoSrc, version }: { logoSrc: string; vers
     if (password !== confirm) return setError("The passwords do not match.");
     setError(null);
     setBusy(true);
+    route.begin();
     try {
-      await register({ username: username.trim(), mobile: digits, password });
+      await register({ username: username.trim(), mobile: digits, password }, route.deliver);
     } catch (err) {
+      route.reset();
       setError(err instanceof Error ? err.message : "Could not create the account.");
     } finally {
       setBusy(false);
@@ -45,19 +45,8 @@ export default function SignUpPage({ logoSrc, version }: { logoSrc: string; vers
   return (
     <div className="sft-login">
       <section className="sl-panel">
-        <div className="sl-panel__top">
-          <div className="sl-logo">
-            <img src={logoSrc} alt="Surfine Technology" />
-          </div>
-          <button type="button" className="sl-theme" onClick={toggleTheme} aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}>
-            {theme === "light" ? <Moon size={14} aria-hidden /> : <Sun size={14} aria-hidden />}
-            {theme === "light" ? "Dark" : "Light"}
-          </button>
-        </div>
-
         <div className="sl-formwrap">
           <form className="sl-form" onSubmit={handleSubmit} noValidate>
-            <span className="sl-hello"><i /> Welcome to SFT Billing</span>
             <div>
               <h1 className="sl-title">Create your account</h1>
               <p className="sl-subtitle">Set up the owner login for this device. Your mobile number is used to reset your password.</p>
@@ -104,7 +93,6 @@ export default function SignUpPage({ logoSrc, version }: { logoSrc: string; vers
                 {busy ? "Creating account" : "Create account"}
                 {!busy && <ArrowRight size={17} aria-hidden />}
               </button>
-              <p className="sl-secure"><ShieldCheck size={13} aria-hidden /> Your data stays on this device</p>
             </div>
           </form>
         </div>
@@ -112,7 +100,7 @@ export default function SignUpPage({ logoSrc, version }: { logoSrc: string; vers
         <p className="sl-footer">SFT Billing · v{version} · © Surfine Technology</p>
       </section>
 
-      <LoginShowcase />
+      <LoginShowcase forcedStep={route.forcedStep} />
     </div>
   );
 }
