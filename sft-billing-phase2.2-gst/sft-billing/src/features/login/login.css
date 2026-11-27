@@ -35,15 +35,61 @@
   order: -1;
   overflow: hidden;
   isolation: isolate;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 48px 56px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: 56px;
+  user-select: none;
+  --frame-color: rgb(216 190 143 / 0.35);
   color: var(--lg-ivory);
   background: linear-gradient(160deg, var(--lg-forest), var(--lg-forest-deep));
+  border-right: 1px solid rgb(216 190 143 / 0.3);
 }
-/* everything readable sits above the background layers and to the right of the gear */
-.sl-col { position: relative; z-index: 1; margin-left: 154px; }
+.sl-brand {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 16px;
+}
+.sl-brand-logo {
+  display: block;
+  width: auto;
+  height: 46px;
+  max-width: 260px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+.sl-brand-rule {
+  height: 1px;
+  flex: 1;
+  background: rgb(216 190 143 / 0.25);
+}
+.sl-brand-version {
+  flex: none;
+  color: var(--lg-champagne);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  white-space: nowrap;
+}
+
+.sl-frame-corners {
+  position: absolute;
+  inset: 24px;
+  z-index: 3;
+  pointer-events: none;
+}
+.sl-frame-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+}
+.sl-frame-corner--tl { top: 0; left: 0; border-top: 1px solid var(--frame-color); border-left: 1px solid var(--frame-color); }
+.sl-frame-corner--tr { top: 0; right: 0; border-top: 1px solid var(--frame-color); border-right: 1px solid var(--frame-color); }
+.sl-frame-corner--br { right: 0; bottom: 0; border-right: 1px solid var(--frame-color); border-bottom: 1px solid var(--frame-color); }
+.sl-frame-corner--bl { bottom: 0; left: 0; border-bottom: 1px solid var(--frame-color); border-left: 1px solid var(--frame-color); }
 
 .sl-bg-grid {
   position: absolute; inset: 0; z-index: 0; pointer-events: none;
@@ -52,34 +98,44 @@
     linear-gradient(90deg, rgb(247 244 238 / 0.02) 1px, transparent 1px);
   background-size: 48px 48px;
 }
-.sl-bg-glow {
-  position: absolute; left: 50%; top: 48%; width: 760px; height: 760px; z-index: 0; pointer-events: none;
-  transform: translate(-50%, -50%);
-}
-.sl-bg-glow > div { position: absolute; inset: 0; border-radius: 50%; transition: opacity 1s; }
-
-.sl-sparks { position: absolute; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
-.sl-spark {
-  position: absolute; bottom: -10px; border-radius: 50%;
-  background: var(--spark, #d8be8f); box-shadow: 0 0 3px var(--spark, #d8be8f);
-  opacity: 0; animation: sl-spark-up linear infinite; transition: background 0.8s;
-}
-@keyframes sl-spark-up {
-  0% { transform: translate3d(0, 0, 0); opacity: 0; }
-  12% { opacity: var(--peak, 0.25); }
-  85% { opacity: calc(var(--peak, 0.25) * 0.5); }
-  100% { transform: translate3d(var(--drift, 0px), -980px, 0); opacity: 0; }
+.sl-cursor-grid-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(ellipse 52% 50% at min(50%, 466px) 50%, rgb(0 0 0 / 0.35) 0%, #000 100%);
+  mask-image: radial-gradient(ellipse 52% 50% at min(50%, 466px) 50%, rgb(0 0 0 / 0.35) 0%, #000 100%);
 }
 
-.sl-gearwrap { position: absolute; left: -160px; top: -159px; width: 340px; height: 329px; z-index: 0; pointer-events: none; }
-.sl-gear { display: block; width: 340px; height: 329px; }
+.sl-gear-clip {
+  position: absolute;
+  inset: 24px;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(ellipse 52px 52px at 100% 100%, transparent 0%, rgb(0 0 0 / 0.35) 58%, #000 100%);
+  mask-image: radial-gradient(ellipse 52px 52px at 100% 100%, transparent 0%, rgb(0 0 0 / 0.35) 58%, #000 100%);
+}
+.sl-gearwrap { position: absolute; right: -208px; bottom: -300px; width: 520px; height: 520px; opacity: 0.5; }
+.sl-gear { display: block; width: 100%; height: 100%; }
+.sl-show .sl-frame-corners { z-index: 3; }
 
-.sl-brandname { font-size: 13px; font-weight: 600; letter-spacing: 0.24em; }
+.sl-stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 0;
+  justify-self: start;
+  flex-direction: column;
+  justify-content: center;
+}
+.sl-part { display: block; width: 100%; max-width: none; height: auto; }
+.sl-partlabel { margin-top: 28px; min-height: 16px; font-size: 11px; font-weight: 500; letter-spacing: 0.2em; color: var(--lg-champagne); }
 
-.sl-part { display: block; width: 100%; max-width: 560px; }
-.sl-partlabel { margin-top: 4px; min-height: 16px; font-size: 11px; font-weight: 500; letter-spacing: 0.2em; color: var(--lg-champagne); }
-
-.sl-route { position: relative; margin: 40px 50px 0; height: 16px; }
+.sl-route { position: relative; width: 100%; margin: 24px 0 0; height: 16px; }
 .sl-route__track { position: absolute; left: 0; right: 0; top: 7px; height: 2px; background: rgb(216 190 143 / 0.2); }
 .sl-route__fill { position: absolute; left: 0; top: 7px; height: 2px; background: var(--lg-champagne); transition: width 0.7s ease; }
 .sl-stop {
@@ -90,13 +146,15 @@
 .sl-stop:focus-visible { outline: 3px solid rgb(184 147 90 / 0.5); outline-offset: 2px; border-radius: 50%; }
 .sl-node { position: relative; display: block; width: 16px; height: 16px; border-radius: 50%; transition: all 0.5s; }
 .sl-pulse { position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; border: 1.5px solid var(--lg-champagne); pointer-events: none; }
-.sl-route__labels { position: relative; margin: 20px 50px 0; height: 18px; }
+.sl-route__labels { position: relative; width: 100%; margin: 14px 0 0; height: 18px; }
 .sl-route__labels span {
   position: absolute; top: 0; width: 120px; margin-left: -60px; text-align: center;
   font-size: 10.5px; font-weight: 600; letter-spacing: 0.2em; transition: color 0.5s;
 }
+.sl-route__labels span:first-child { margin-left: 0; text-align: left; }
+.sl-route__labels span:last-child { margin-left: -120px; text-align: right; }
 
-.sl-caption { margin-top: 40px; min-height: 150px; }
+.sl-caption { margin-top: 28px; min-height: 150px; }
 .sl-caption__n { font-size: 11px; font-weight: 600; letter-spacing: 0.24em; color: var(--lg-champagne); }
 .sl-caption__label { margin-top: 6px; font-family: var(--lg-display); font-size: 34px; line-height: 1.15; letter-spacing: -0.01em; }
 .sl-caption__text { margin-top: 8px; font-size: 15px; line-height: 1.5; color: rgb(247 244 238 / 0.74); }
@@ -112,6 +170,7 @@
 .sl-chip--gold.sl-chip--on { background: var(--lg-champagne); border-color: var(--lg-champagne); }
 .sl-chip:focus-visible { outline: 3px solid rgb(184 147 90 / 0.5); outline-offset: 2px; }
 
+.sl-foot { position: relative; z-index: 2; }
 .sl-foot__line { font-size: 13px; line-height: 1.6; color: rgb(247 244 238 / 0.78); }
 .sl-foot__tag { margin-top: 22px; font-size: 11px; letter-spacing: 0.2em; color: var(--lg-champagne); }
 
@@ -121,13 +180,16 @@
   display: flex;
   flex-direction: column;
   padding: 24px 24px 20px;
+  --frame-color: var(--lg-line);
   background: var(--lg-ivory);
   overflow-y: auto;
 }
-.sl-formwrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px 0; }
-.sl-form { width: 100%; max-width: 296px; animation: sl-rise 0.6s ease-out both; }
+.sl-panel .sl-frame-corners { z-index: 0; }
+.sl-formwrap { position: relative; z-index: 1; flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px 0; }
+.sl-form { width: 100%; max-width: 340px; animation: sl-rise 0.6s ease-out both; }
+.sl-form-emblem { display: block; width: 44px; height: 44px; margin-bottom: 20px; object-fit: contain; }
 
-.sl-title { margin: 0; font-family: var(--lg-display); font-weight: 400; font-size: 28px; line-height: 1.1; letter-spacing: -0.01em; color: var(--lg-ink); }
+.sl-title { margin: 0; font-family: var(--lg-display); font-weight: 400; font-size: 32px; line-height: 1.1; letter-spacing: -0.01em; color: var(--lg-ink); }
 .sl-subtitle { margin: 6px 0 24px; font-size: 13px; line-height: 1.5; color: var(--lg-muted); }
 
 .sl-field { position: relative; }
@@ -137,7 +199,7 @@
 .sl-input-wrap > svg.sl-lead { display: none; }
 .sl-input {
   width: 100%;
-  height: 42px;
+  height: 46px;
   padding: 0 12px;
   font: 400 13px "Inter Variable", "Inter", system-ui, sans-serif;
   color: var(--lg-ink);
@@ -169,7 +231,7 @@
 .sl-forgot:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .sl-submit {
-  margin-top: 22px; width: 100%; height: 46px;
+  margin-top: 22px; width: 100%; height: 48px;
   display: flex; align-items: center; justify-content: center; gap: 10px;
   border: 0; border-radius: 8px; cursor: pointer;
   background: var(--lg-button); color: var(--lg-ivory);
@@ -185,30 +247,27 @@
 .sl-submit:hover svg { transform: translateX(3px); }
 .sl-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgb(247 244 238 / 0.35); border-top-color: var(--lg-ivory); animation: sl-spin 0.7s linear infinite; }
 
-.sl-footer { margin: 0; text-align: center; font-size: 12px; color: var(--lg-muted); }
+.sl-footer { position: relative; z-index: 1; margin: 0; text-align: center; font-size: 12px; color: var(--lg-muted); }
 
 @keyframes sl-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes sl-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 @keyframes sl-spin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .sl-spark { animation: none; opacity: 0.12; }
   .sl-route__fill, .sl-node { transition: none; }
   .sl-form, .sl-error { animation: none; }
   .sl-spin { animation-duration: 1.6s; }
 }
 
 /* ───────── Responsive ───────── */
-@media (max-width: 1180px) {
-  .sl-show { padding: 40px; }
-  .sl-col { margin-left: 120px; }
-}
 @media (max-width: 900px) {
   .sft-login { grid-template-columns: 1fr; height: auto; min-height: 100dvh; }
   .sl-show { display: none; }
   .sl-panel { min-height: 100dvh; }
 }
+@media (max-width: 1180px) {
+  .sl-gearwrap { right: -360px; }
+}
 @media (max-height: 760px) {
-  .sl-caption { min-height: 110px; margin-top: 24px; }
-  .sl-foot__line { display: none; }
+  .sl-show { padding: 32px 56px; }
 }

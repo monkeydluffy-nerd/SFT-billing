@@ -21,7 +21,7 @@ export interface LoginPageProps {
   loading?: boolean;
 }
 
-export default function LoginPage({ version, error, loading, onSubmit }: LoginPageProps) {
+export default function LoginPage({ logoSrc, version, error, loading, onSubmit }: LoginPageProps) {
   const uid = useId();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -96,9 +96,16 @@ export default function LoginPage({ version, error, loading, onSubmit }: LoginPa
   return (
     <div className="sft-login">
       <section className="sl-panel">
+        <div className="sl-frame-corners" aria-hidden="true">
+          <span className="sl-frame-corner sl-frame-corner--tl" />
+          <span className="sl-frame-corner sl-frame-corner--tr" />
+          <span className="sl-frame-corner sl-frame-corner--br" />
+          <span className="sl-frame-corner sl-frame-corner--bl" />
+        </div>
         <div className="sl-formwrap">
           <form className="sl-form" onSubmit={handleSubmit} noValidate>
             <div>
+              <img className="sl-form-emblem" src="/brand/surfine-emblem.png" alt="Surfine Technology emblem" />
               <h1 className="sl-title">Welcome back</h1>
               <p className="sl-subtitle">Sign in to your workspace.</p>
             </div>
@@ -168,7 +175,7 @@ export default function LoginPage({ version, error, loading, onSubmit }: LoginPa
         <p className="sl-footer">SFT Billing · v{version} · © Surfine Technology</p>
       </section>
 
-      <LoginShowcase forcedStep={route.forcedStep} />
+      <LoginShowcase logoSrc={logoSrc} forcedStep={route.forcedStep} />
 
       <ForgotPasswordModal
         open={recoveryOpen}

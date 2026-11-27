@@ -8,7 +8,13 @@ import "./fonts";
 const MIN_PASSWORD = 8;
 
 /** Shown once, on the first launch after installation, until an account exists. */
-export default function SignUpPage({ version }: { logoSrc?: string; version: string }) {
+export default function SignUpPage({
+  logoSrc = "/brand/surfine-horizontal.png",
+  version,
+}: {
+  logoSrc?: string;
+  version: string;
+}) {
   const uid = useId();
   const [username, setUsername] = useState("");
   const [mobile, setMobile] = useState("");
@@ -45,9 +51,16 @@ export default function SignUpPage({ version }: { logoSrc?: string; version: str
   return (
     <div className="sft-login">
       <section className="sl-panel">
+        <div className="sl-frame-corners" aria-hidden="true">
+          <span className="sl-frame-corner sl-frame-corner--tl" />
+          <span className="sl-frame-corner sl-frame-corner--tr" />
+          <span className="sl-frame-corner sl-frame-corner--br" />
+          <span className="sl-frame-corner sl-frame-corner--bl" />
+        </div>
         <div className="sl-formwrap">
           <form className="sl-form" onSubmit={handleSubmit} noValidate>
             <div>
+              <img className="sl-form-emblem" src="/brand/surfine-emblem.png" alt="Surfine Technology emblem" />
               <h1 className="sl-title">Create your account</h1>
               <p className="sl-subtitle">Set up the owner login for this device. Your mobile number is used to reset your password.</p>
             </div>
@@ -100,7 +113,7 @@ export default function SignUpPage({ version }: { logoSrc?: string; version: str
         <p className="sl-footer">SFT Billing · v{version} · © Surfine Technology</p>
       </section>
 
-      <LoginShowcase forcedStep={route.forcedStep} />
+      <LoginShowcase logoSrc={logoSrc} forcedStep={route.forcedStep} />
     </div>
   );
 }

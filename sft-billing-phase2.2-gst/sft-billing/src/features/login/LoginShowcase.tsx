@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, useTransform, type MotionValue, type Variants } from "framer-motion";
 import { BURST_ANGLES, EASE, MANUFACTURE, PLATING, SIGN_IN_SCALE, SPRING, STAGE_MS, scaled } from "./routeTimeline";
+import CursorGrid from "./CursorGrid";
 
 /**
  * Brand panel for the login and sign-up screens: "the route of a part".
@@ -98,33 +99,42 @@ export function useRouteSignIn(): RouteSignIn {
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
-/**
- * SFT-002 shank as a polygon. `form` runs 0 to 1: the plain bar's left end pulls
- * back to where the eye is forged, and the thread teeth rise one after another
- * from left to right. The point count never changes, so the path is always valid.
- */
+/** The forged shank silhouette morphs from bar stock as `form` runs from 0 to 1. */
 function shankAt(form: number): string {
-  const left = 50 + 100 * clamp01(form / 0.5);
-  const teeth = clamp01((form - 0.25) / 0.75);
-  const top: [number, number][] = [[left, 128], [250, 128]];
-  const bottom: [number, number][] = [[250, 172], [left, 172]];
-  const upper: [number, number][] = [];
-  const lower: [number, number][] = [];
-  for (let i = 0; i <= 20; i += 1) {
-    const x = 262 + i * 11.4;
-    const amp = clamp01(teeth * 25 - i);
-    const even = i % 2 === 0;
-    upper.push([x, 128 + amp * (even ? -5 : 4)]);
-    lower.push([x, 172 + amp * (even ? 5 : -4)]);
-  }
-  const tipAmp = clamp01(teeth * 25 - 21);
-  const tip: [number, number][] = [[500, 128 + tipAmp * 8], [500, 172 - tipAmp * 8]];
-  const pts = top.concat(upper, tip, lower.reverse(), bottom);
-  return `M${pts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("L")}Z`;
+  const progress = clamp01(form);
+  const collar = clamp01(progress / 0.5);
+  const chamfer = clamp01(progress / 0.5);
+  const left = 50 + 100 * collar;
+  const shoulder = 6 * collar;
+  const bevelStart = 490 - 10 * chamfer;
+  const tip = 500 - 10 * chamfer;
+  const tipInset = 6 * chamfer;
+
+  return [
+    `M${left} 128`,
+    "L154 128",
+    `C158 128 160 ${128 - shoulder} 164 ${128 - shoulder}`,
+    `L174 ${128 - shoulder}`,
+    `Q181 ${128 - shoulder} 184 128`,
+    "L262 128",
+    `L${bevelStart} 128`,
+    `L${tip} ${128 + tipInset}`,
+    `L${tip} ${172 - tipInset}`,
+    `L${bevelStart} 172`,
+    "L262 172",
+    "L184 172",
+    `Q181 ${172 + shoulder} 174 ${172 + shoulder}`,
+    `L164 ${172 + shoulder}`,
+    `C160 ${172 + shoulder} 158 172 154 172`,
+    `L${left} 172Z`,
+  ].join("");
 }
 
-const SHANK_BAR = shankAt(0);
 const SHANK_FORGED = shankAt(1);
+const THREAD_LINES = Array.from({ length: 20 }, (_, index) => {
+  const x = 262 + index * 11.4;
+  return `M${x} 129C${x + 4} 140 ${x + 11} 160 ${x + 15} 171`;
+});
 
 /** A line-drawn gear: 60 teeth, a rim, five tapered spokes and a small toothed hub. */
 function buildGear() {
@@ -169,22 +179,6 @@ function buildGear() {
 
 const GEAR = buildGear();
 
-/** A fixed scatter of sparks (the same every render, so nothing jumps). */
-const SPARKS = (() => {
-  let seed = 7;
-  const rnd = () => {
-    seed = (seed * 1103515245 + 12345) % 2147483648;
-    return seed / 2147483648;
-  };
-  return Array.from({ length: 18 }, () => ({
-    left: `${(rnd() * 100).toFixed(1)}%`,
-    size: `${(1.2 + rnd() * 1.4).toFixed(1)}px`,
-    dur: `${(9 + rnd() * 9).toFixed(1)}s`,
-    delay: `-${(rnd() * 16).toFixed(1)}s`,
-    drift: `${((rnd() - 0.5) * 120).toFixed(0)}px`,
-  }));
-})();
-
 /** Wave along the top of the plating bath (one wavelength is 80 wide, so it can slide forever). */
 const WAVE = (() => {
   let d = "M-40 190";
@@ -210,6 +204,7 @@ function RouteScene({ step, finish, k, entering, statik }: SceneProps) {
   /* forging progress (0 bar, 1 eye bolt): drives the shape of the shank */
   const form = useMotionValue(0);
   const shankD: MotionValue<string> = useTransform(form, shankAt);
+  const threadReveal = useTransform(form, (value) => 218 * clamp01((value - 0.22) / 0.78));
   const formAnim = useRef<ReturnType<typeof animate> | null>(null);
   useEffect(() => {
     formAnim.current?.stop();
@@ -288,6 +283,15 @@ function RouteScene({ step, finish, k, entering, statik }: SceneProps) {
   };
   const packed = step === 3 || step === 4;
   const resetNow = { duration: 0 };
+  const calloutsVisible = step === 1 || step === 2;
+  const calloutDelay = step === 1 && !statik ? w(MANUFACTURE.formAt + MANUFACTURE.formFor) : 0;
+  const calloutPathTransition = step === 1
+    ? { duration: statik ? 0 : d(0.45), delay: calloutDelay, ease: EASE.out }
+    : { duration: statik ? 0 : d(0.25), ease: EASE.out };
+  const calloutOpacityTransition = calloutsVisible && step === 1
+    ? { duration: statik ? 0 : d(0.2), delay: calloutDelay }
+    : { duration: statik ? 0 : d(0.3) };
+  const threadStroke = step === 2 || step === 3 ? "rgba(0,0,0,.28)" : "#D8BE8F";
 
   const invoiceOn = step === 4;
   const stampDelay = w(2.3);
@@ -297,7 +301,7 @@ function RouteScene({ step, finish, k, entering, statik }: SceneProps) {
     <svg className="sl-part" viewBox="0 50 560 200" role="img" aria-label={STAGES[step].alt}>
       <defs>
         <linearGradient id="slRaw" gradientUnits="userSpaceOnUse" x1="0" y1="86" x2="0" y2="214">
-          <stop offset="0" stopColor="#151D1A" /><stop offset=".35" stopColor="#3B4944" /><stop offset=".5" stopColor="#43524C" /><stop offset=".7" stopColor="#28332F" /><stop offset="1" stopColor="#151D1A" />
+          <stop offset="0" stopColor="#3B4944" /><stop offset=".35" stopColor="#3B4944" /><stop offset=".5" stopColor="#43524C" /><stop offset=".7" stopColor="#28332F" /><stop offset="1" stopColor="#28332F" />
         </linearGradient>
         <linearGradient id="slZinc" gradientUnits="userSpaceOnUse" x1="0" y1="86" x2="0" y2="214">
           <stop offset="0" stopColor="#7E8A85" /><stop offset=".22" stopColor="#CBD3CF" /><stop offset=".4" stopColor="#F4F7F5" /><stop offset=".55" stopColor="#E1E7E4" /><stop offset=".78" stopColor="#A9B4AF" /><stop offset="1" stopColor="#76827D" />
@@ -321,15 +325,21 @@ function RouteScene({ step, finish, k, entering, statik }: SceneProps) {
         </mask>
         <mask id="slHideRod" maskUnits="userSpaceOnUse" x="0" y="0" width="560" height="300">
           <rect x="0" y="0" width="560" height="300" fill="#fff" />
-          <rect x="120" y="128.65" width="400" height="42.7" fill="#000" />
+          <motion.path d={shankD} fill="#000" />
         </mask>
-        <clipPath id="slBarClip"><path d={SHANK_BAR} /></clipPath>
+        <clipPath id="slBarClip"><motion.path d={shankD} /></clipPath>
         <clipPath id="slPartClip">
           <path d={SHANK_FORGED} />
           <path d="M54 150A56 56 0 1 0 166 150A56 56 0 1 0 54 150Z M78 150A32 32 0 1 0 142 150A32 32 0 1 0 78 150Z" clipRule="evenodd" />
         </clipPath>
+        <clipPath id="slThreadClip">
+          <motion.rect x={262} y={120} width={threadReveal} height={60} />
+        </clipPath>
         <clipPath id="slWipeWhite"><motion.rect x={0} y={40} height={220} initial={{ width: 0 }} animate={{ width: wipeW }} transition={wipeTransition} /></clipPath>
         <clipPath id="slWipeGold"><motion.rect x={0} y={40} height={220} initial={{ width: 0 }} animate={{ width: wipeG }} transition={wipeTransition} /></clipPath>
+        <clipPath id="slBathClip" clipPathUnits="userSpaceOnUse">
+          <rect x="40" y="188" width="480" height="58" rx="8" />
+        </clipPath>
       </defs>
 
       <motion.path d="M20 150H540" fill="none" stroke="#D8BE8F" strokeOpacity=".3" strokeDasharray="14 3 2 3" initial={false} animate={{ opacity: step <= 2 ? 1 : 0 }} transition={{ duration: d(0.7) }} />
@@ -345,10 +355,10 @@ function RouteScene({ step, finish, k, entering, statik }: SceneProps) {
         <motion.path d={shankD} fill="url(#slRaw)" />
         <motion.circle
           cx="110" cy="150" r="44" fill="none" stroke="url(#slRaw)" strokeWidth="24"
+          mask="url(#slHideRod)"
           initial={{ pathLength: 0 }}
           animate={{ pathLength: step === 1 || step === 2 || step === 3 ? 1 : 0 }}
           transition={step === 1 ? { duration: d(MANUFACTURE.formFor * 0.7), delay: w(MANUFACTURE.formAt), ease: EASE.inOut } : step === 4 ? resetNow : { duration: d(0.4) }}
-          style={{ rotate: -90 }}
         />
 
         {/* heat sweeps along the bar before the strike */}
@@ -359,11 +369,11 @@ function RouteScene({ step, finish, k, entering, statik }: SceneProps) {
         {/* the finish is wiped on from left to right while the part is under the liquid */}
         <g clipPath="url(#slWipeWhite)">
           <path d={SHANK_FORGED} fill="url(#slZinc)" />
-          <circle cx="110" cy="150" r="44" fill="none" stroke="url(#slZinc)" strokeWidth="24" />
+          <circle cx="110" cy="150" r="44" fill="none" stroke="url(#slZinc)" strokeWidth="24" mask="url(#slHideRod)" />
         </g>
         <g clipPath="url(#slWipeGold)">
           <path d={SHANK_FORGED} fill="url(#slGold)" />
-          <circle cx="110" cy="150" r="44" fill="none" stroke="url(#slGold)" strokeWidth="24" />
+          <circle cx="110" cy="150" r="44" fill="none" stroke="url(#slGold)" strokeWidth="24" mask="url(#slHideRod)" />
         </g>
 
         {/* one sheen sweep once the part is lifted out */}
@@ -375,11 +385,17 @@ function RouteScene({ step, finish, k, entering, statik }: SceneProps) {
           />
         </g>
 
+        <g clipPath="url(#slPartClip)">
+          <g clipPath="url(#slThreadClip)" fill="none" stroke={threadStroke} strokeWidth="1" strokeOpacity={step === 2 || step === 3 ? 1 : 0.6} strokeLinecap="round">
+            {THREAD_LINES.map((line, index) => <path key={index} d={line} />)}
+          </g>
+        </g>
+
         {/* outlines: dashed while it is bar stock, solid once it is formed */}
-        {/* one merged outline: the rod's edge stops at the ring and the ring's edge stops at the rod */}
+        {/* The body and eye outlines stop at one another for a clean forged joint. */}
         <g mask="url(#slHideRing)">
           <motion.path
-            d={shankD} fill="none" stroke="#D8BE8F" strokeWidth="1.3" strokeOpacity=".8" strokeLinejoin="round"
+            d={shankD} fill="none" stroke="#D8BE8F" strokeWidth="1.3" strokeOpacity=".8" strokeLinejoin="round" strokeLinecap="round"
             initial={false} animate={{ strokeDasharray: step === 0 ? "4 5" : "1000 0" }} transition={{ duration: d(0.5) }}
           />
         </g>
@@ -389,14 +405,66 @@ function RouteScene({ step, finish, k, entering, statik }: SceneProps) {
           </g>
           <circle cx="110" cy="150" r="32" fill="none" stroke="#D8BE8F" strokeWidth="1.3" strokeOpacity=".8" />
         </motion.g>
+
+        <motion.g
+          clipPath="url(#slPartClip)"
+          initial={false}
+          animate={{ opacity: step === 2 ? 1 : 0 }}
+          transition={step === 2
+            ? { duration: d(0.65), delay: w(PLATING.wipeAt), ease: EASE.out }
+            : { duration: step >= 3 ? d(0.25) : 0 }}
+          fill="none"
+        >
+          <path d="M186 140H470" stroke="#fff" strokeWidth="1" strokeOpacity=".25" strokeLinecap="round" />
+          <path d="M70 137A44 44 0 0 1 99 108" stroke="#fff" strokeWidth="1" strokeOpacity=".35" strokeLinecap="round" />
+        </motion.g>
+
+        <motion.g
+          initial={false}
+          animate={{ opacity: calloutsVisible ? 1 : 0 }}
+          transition={calloutOpacityTransition}
+          fill="none"
+          stroke="#D8BE8F"
+          strokeOpacity=".7"
+          strokeWidth="1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <motion.path
+            d="M182 108H490 M182 108V122 M490 108V134 M182 108L190 105 M182 108L190 111 M490 108L482 105 M490 108L482 111"
+            initial={false}
+            animate={{ pathLength: step >= 1 ? 1 : 0 }}
+            transition={calloutPathTransition}
+          />
+          <motion.path
+            d="M412 123L402 134L398 144"
+            initial={false}
+            animate={{ pathLength: step >= 1 ? 1 : 0 }}
+            transition={calloutPathTransition}
+          />
+          <motion.text
+            x="336" y="103" textAnchor="middle" fill="#D8BE8F" fillOpacity=".7" stroke="none"
+            fontFamily="Inter,sans-serif" fontSize="10" fontWeight="400" letterSpacing=".08em"
+          >
+            90
+          </motion.text>
+          <motion.text
+            x="416" y="122" fill="#D8BE8F" fillOpacity=".7" stroke="none"
+            fontFamily="Inter,sans-serif" fontSize="10" fontWeight="400" letterSpacing=".08em"
+          >
+            M25
+          </motion.text>
+        </motion.g>
       </motion.g>
 
       {/* liquid in front of the part, with a slow wave and rising bubbles */}
       <motion.g variants={bath} initial={statik ? false : "off"} animate={bathState} style={{ pointerEvents: "none" }}>
-        <motion.path d={WAVE} initial={false} animate={{ fill: finish === "gold" ? "rgba(232,190,90,.20)" : "rgba(235,242,238,.12)" }} transition={{ duration: d(0.6) }} clipPath="inset(0 0 0 0)" />
-        <motion.g animate={step === 2 && k > 0 ? { x: [0, -80] } : { x: 0 }} transition={step === 2 && k > 0 ? { duration: 3, repeat: Infinity, ease: "linear" } : { duration: 0 }}>
-          <motion.path d="M-40 190q20 -5 40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0" fill="none" stroke="#D8BE8F" strokeOpacity=".6" strokeWidth="1.2" />
-        </motion.g>
+        <g clipPath="url(#slBathClip)">
+          <motion.path d={WAVE} initial={false} animate={{ fill: finish === "gold" ? "rgba(232,190,90,.20)" : "rgba(235,242,238,.12)" }} transition={{ duration: d(0.6) }} />
+          <motion.g animate={step === 2 && k > 0 ? { x: [0, -80] } : { x: 0 }} transition={step === 2 && k > 0 ? { duration: 3, repeat: Infinity, ease: "linear" } : { duration: 0 }}>
+            <motion.path d="M-40 190q20 -5 40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0" fill="none" stroke="#D8BE8F" strokeOpacity=".6" strokeWidth="1.2" />
+          </motion.g>
+        </g>
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <motion.circle
             key={i} cx={90 + i * 78} cy={232} r={1.8 + (i % 3) * 0.7} fill="none" stroke="#D8BE8F" strokeOpacity=".6"
@@ -489,15 +557,20 @@ function RouteScene({ step, finish, k, entering, statik }: SceneProps) {
 /* ── component ────────────────────────────────────────────────────────── */
 
 interface LoginShowcaseProps {
+  logoSrc?: string;
   /** Set while a sign-in is running; null lets the part travel on its own. */
   forcedStep?: number | null;
 }
 
-export default function LoginShowcase({ forcedStep = null }: LoginShowcaseProps) {
+export default function LoginShowcase({
+  logoSrc = "/brand/surfine-horizontal.png",
+  forcedStep = null,
+}: LoginShowcaseProps) {
   const reduce = useMemo(prefersReducedMotion, []);
   const [autoStep, setAutoStep] = useState(reduce ? 2 : 0);
   const [finish, setFinish] = useState<Finish>("white");
   const [tick, setTick] = useState(0);
+  const [cursorGridAvailable, setCursorGridAvailable] = useState<boolean | null>(null);
   const pausedUntil = useRef(0);
 
   const step = forcedStep ?? autoStep;
@@ -538,56 +611,81 @@ export default function LoginShowcase({ forcedStep = null }: LoginShowcaseProps)
   }
 
   const k = reduce ? 0 : signingIn ? SIGN_IN_SCALE : 1;
-  const zincW = step >= 2 && finish === "white" ? 1 : 0;
-  const zincG = step >= 2 && finish === "gold" ? 1 : 0;
-  const sparkColor = step === 1 ? "#F2C46B" : step === 2 ? (finish === "gold" ? "#F0CF7A" : "#F4F7F5") : "#D8BE8F";
-  const sparkPeak = step === 1 ? "0.55" : step === 2 ? "0.4" : "0.25";
   const gearDur = reduce ? "100000s" : signingIn ? "10s" : step === 1 ? "28s" : "60s";
   const pct = (i: number) => `${(i / 4) * 100}%`;
 
   return (
     <aside className="sl-show" aria-label="SFT Billing by Surfine Technology">
-      {/* background: a faint grid, a glow that follows the stage, and sparks that rise */}
-      <div className="sl-bg-grid" aria-hidden="true" />
-      <div className="sl-bg-glow" aria-hidden="true">
-        <div style={{ background: "radial-gradient(closest-side,rgba(236,150,60,.14),rgba(236,150,60,0))", opacity: step === 1 ? 1 : 0 }} />
-        <div style={{ background: "radial-gradient(closest-side,rgba(235,242,238,.10),rgba(235,242,238,0))", opacity: zincW }} />
-        <div style={{ background: "radial-gradient(closest-side,rgba(232,190,90,.13),rgba(232,190,90,0))", opacity: zincG }} />
+      <div className="sl-frame-corners" aria-hidden="true">
+        <span className="sl-frame-corner sl-frame-corner--tl" />
+        <span className="sl-frame-corner sl-frame-corner--tr" />
+        <span className="sl-frame-corner sl-frame-corner--br" />
+        <span className="sl-frame-corner sl-frame-corner--bl" />
       </div>
-      <div className="sl-sparks" aria-hidden="true" style={{ "--spark": sparkColor, "--peak": sparkPeak } as CSSProperties}>
-        {SPARKS.map((s, i) => (
-          <span
-            key={i}
-            className="sl-spark"
-            style={{ left: s.left, width: s.size, height: s.size, animationDuration: s.dur, animationDelay: s.delay, "--drift": s.drift } as CSSProperties}
+
+      {reduce ? (
+        <div className="sl-bg-grid" aria-hidden="true" />
+      ) : (
+        <div className="sl-cursor-grid-layer" aria-hidden="true">
+          {cursorGridAvailable === false && <div className="sl-bg-grid" />}
+          <CursorGrid
+            cellSize={48}
+            color="#D8BE8F"
+            gridColor="#D8BE8F"
+            highlight="area"
+            gridStyle="crosses"
+            radius={100}
+            falloff="smooth"
+            holdTime={150}
+            fadeDuration={600}
+            lineWidth={1}
+            maxOpacity={0.22}
+            fillOpacity={0.015}
+            gridOpacity={0.05}
+            spotlight={0.3}
+            cellGap={0}
+            cellRadius={0}
+            clickPulse
+            pulseSpeed={420}
+            pulseStrength={0.45}
+            ambient={0}
+            edgeFade={0.15}
+            intro
+            onStatusChange={setCursorGridAvailable}
           />
-        ))}
+        </div>
+      )}
+
+      {/* the gear: line drawing, clipped to the frame, always turning */}
+      <div className="sl-gear-clip" aria-hidden="true">
+        <div className="sl-gearwrap">
+          <svg className="sl-gear" viewBox="0 0 400 400">
+            <g fill="#17372c" stroke="#D8BE8F" strokeLinejoin="round" strokeLinecap="round">
+              <animateTransform attributeName="transform" type="rotate" from="0 200 200" to="360 200 200" dur={gearDur} repeatCount="indefinite" />
+              <path d={GEAR.teeth} fillRule="evenodd" strokeWidth="1.3" strokeOpacity=".9" />
+              <circle cx="200" cy="200" r="174" fill="none" strokeWidth=".8" strokeOpacity=".5" />
+              <circle cx="200" cy="200" r="138" fill="none" strokeWidth=".7" strokeOpacity=".35" />
+              <circle cx="200" cy="200" r="132" fill="none" strokeWidth="1" strokeOpacity=".6" />
+              <path d={GEAR.spokes} strokeWidth="1.2" strokeOpacity=".85" />
+              <path d={GEAR.spokeEdges} fill="none" strokeWidth=".8" strokeOpacity=".5" />
+              <path d={GEAR.hubTeeth} strokeWidth="1.1" strokeOpacity=".9" />
+              <circle cx="200" cy="200" r="44" strokeWidth="1.1" strokeOpacity=".85" />
+              <circle cx="200" cy="200" r="30" strokeWidth="1" strokeOpacity=".8" />
+              <circle cx="200" cy="200" r="21" fill="none" strokeWidth=".7" strokeOpacity=".5" />
+              <circle cx="200" cy="200" r="15" fill="none" strokeWidth="1.2" strokeOpacity=".9" />
+              <circle cx="200" cy="200" r="5" fill="#D8BE8F" stroke="none" />
+            </g>
+          </svg>
+        </div>
       </div>
 
-      {/* the gear: line drawing, half off the page edge, always turning */}
-      <div className="sl-gearwrap" aria-hidden="true">
-        <svg className="sl-gear" viewBox="0 0 400 400">
-          <g fill="#17372c" stroke="#D8BE8F" strokeLinejoin="round" strokeLinecap="round">
-            <animateTransform attributeName="transform" type="rotate" from="0 200 200" to="360 200 200" dur={gearDur} repeatCount="indefinite" />
-            <path d={GEAR.teeth} fillRule="evenodd" strokeWidth="1.3" strokeOpacity=".9" />
-            <circle cx="200" cy="200" r="174" fill="none" strokeWidth=".8" strokeOpacity=".5" />
-            <circle cx="200" cy="200" r="138" fill="none" strokeWidth=".7" strokeOpacity=".35" />
-            <circle cx="200" cy="200" r="132" fill="none" strokeWidth="1" strokeOpacity=".6" />
-            <path d={GEAR.spokes} strokeWidth="1.2" strokeOpacity=".85" />
-            <path d={GEAR.spokeEdges} fill="none" strokeWidth=".8" strokeOpacity=".5" />
-            <path d={GEAR.hubTeeth} strokeWidth="1.1" strokeOpacity=".9" />
-            <circle cx="200" cy="200" r="44" strokeWidth="1.1" strokeOpacity=".85" />
-            <circle cx="200" cy="200" r="30" strokeWidth="1" strokeOpacity=".8" />
-            <circle cx="200" cy="200" r="21" fill="none" strokeWidth=".7" strokeOpacity=".5" />
-            <circle cx="200" cy="200" r="15" fill="none" strokeWidth="1.2" strokeOpacity=".9" />
-            <circle cx="200" cy="200" r="5" fill="#D8BE8F" stroke="none" />
-          </g>
-        </svg>
+      <div className="sl-brand">
+        <img className="sl-brand-logo" src={logoSrc} alt="Surfine Technology" />
+        <span className="sl-brand-rule" aria-hidden="true" />
+        <span className="sl-brand-version">SFT BILLING · v1.1.0</span>
       </div>
 
-      <div className="sl-col sl-brandname">SURFINE TECHNOLOGY</div>
-
-      <div className="sl-col sl-stage">
+      <div className="sl-stage">
         <RouteScene step={step} finish={finish} k={k} entering={entering} statik={reduce} />
         <div className="sl-partlabel">{step >= 1 ? "SFT-002  ·  EYE BOLT MS 25x90 PITCH  ·  HSN 7318" : "BAR STOCK"}</div>
 
@@ -638,7 +736,7 @@ export default function LoginShowcase({ forcedStep = null }: LoginShowcaseProps)
           {STAGES.map((s, i) => (
             <span
               key={s.n}
-              style={{ left: pct(i), color: i === step ? "#F7F4EE" : i < step ? "rgba(216,190,143,.9)" : "rgba(216,190,143,.5)" }}
+              style={{ left: pct(i), color: i === step ? "#F7F4EE" : i < step ? "rgba(216,190,143,.9)" : "rgba(216,190,143,.65)" }}
             >
               {s.name}
             </span>
@@ -673,7 +771,7 @@ export default function LoginShowcase({ forcedStep = null }: LoginShowcaseProps)
         </div>
       </div>
 
-      <div className="sl-col sl-foot">
+      <div className="sl-foot">
         <div className="sl-foot__line">Then the invoice, the payment and the report. That part is SFT Billing.</div>
         <div className="sl-foot__tag">FORGING A STRONGER TOMORROW</div>
       </div>
