@@ -1,11 +1,22 @@
 import { FormEvent, useId, useState } from "react";
 import { useAuthStore } from "@/hooks/useAuthStore";
-import LoginShowcase, { useRouteSignIn } from "./LoginShowcase";
-import { ArrowRight, Eye, EyeOff, Lock, Phone, User } from "lucide-react";
+import AuthLayout from "./AuthLayout";
+import { ArrowRight, Eye, EyeOff, Loader2, Lock, Phone, User } from "lucide-react";
+import StarBorder from "./StarBorder";
 import "./login.css";
 import "./fonts";
 
 const MIN_PASSWORD = 8;
+const SERVER_UNREACHABLE_MESSAGE = "Couldn't reach the server. Check that the app is running and try again.";
+
+function getAuthErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
+  const isNotFoundResponse = /^(?:not found|404(?:\s+not found)?)$/i.test(message.trim());
+  const isUnreachable = error instanceof TypeError || isNotFoundResponse ||
+    /failed to fetch|networkerror|network request failed|load failed|connection refused|connection reset|err_connection_/i.test(message);
+
+  return isUnreachable ? SERVER_UNREACHABLE_MESSAGE : message || fallback;
+}
 
 /** Shown once, on the first launch after installation, until an account exists. */
 export default function SignUpPage({
@@ -25,7 +36,6 @@ export default function SignUpPage({
   const [error, setError] = useState<string | null>(null);
 
   const register = useAuthStore((st) => st.register);
-  const route = useRouteSignIn();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -37,34 +47,23 @@ export default function SignUpPage({
     if (password !== confirm) return setError("The passwords do not match.");
     setError(null);
     setBusy(true);
-    route.begin();
     try {
-      await register({ username: username.trim(), mobile: digits, password }, route.deliver);
+      await register({ username: username.trim(), mobile: digits, password });
     } catch (err) {
-      route.reset();
-      setError(err instanceof Error ? err.message : "Could not create the account.");
+      setError(getAuthErrorMessage(err, "Could not create the account."));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="sft-login">
-      <section className="sl-panel">
-        <div className="sl-frame-corners" aria-hidden="true">
-          <span className="sl-frame-corner sl-frame-corner--tl" />
-          <span className="sl-frame-corner sl-frame-corner--tr" />
-          <span className="sl-frame-corner sl-frame-corner--br" />
-          <span className="sl-frame-corner sl-frame-corner--bl" />
-        </div>
-        <div className="sl-formwrap">
-          <form className="sl-form" onSubmit={handleSubmit} noValidate>
-            <div>
-              <img className="sl-form-emblem" src="/brand/surfine-emblem.png" alt="Surfine Technology emblem" />
-              <h1 className="sl-title">Create your account</h1>
-              <p className="sl-subtitle">Set up the owner login for this device. Your mobile number is used to reset your password.</p>
-            </div>
-
+    <AuthLayout
+      logoSrc={logoSrc}
+      title="Create your account."
+      subtitle="Invoices, payments and reports for Surfine Technology, in one place."
+      footer={`SFT Billing · v${version} · © Surfine Technology`}
+    >
+      <form className="sl-form" onSubmit={handleSubmit} noValidate>
             <div>
               <div className="sl-field">
                 <label className="sl-label" htmlFor={`${uid}-u`}>Username</label>
@@ -101,19 +100,34 @@ export default function SignUpPage({
             </div>
 
             <div>
-              <button className="sl-submit" type="submit" disabled={busy} aria-busy={busy}>
-                {busy ? <span className="sl-spin" aria-hidden /> : null}
+              <StarBorder
+                type="submit"
+                disabled={busy}
+                aria-busy={busy}
+                className="sl-submit"
+                theme="dark"
+                backgroundColor="#e6e6e6"
+                textColor="#111111"
+                borderColor="rgb(0 0 0 / 0.12)"
+                color="#e8944f"
+                trailColor="#e8944f"
+                radius={8}
+                thickness={1}
+                duration={5}
+                direction="clockwise"
+                stars={1}
+                trailLength={0.3}
+                glow={0.45}
+                sparkle={false}
+                hover="brighten"
+                clickPulse={false}
+              >
+                {busy ? <Loader2 className="sl-spin" aria-hidden /> : null}
                 {busy ? "Creating account" : "Create account"}
                 {!busy && <ArrowRight size={17} aria-hidden />}
-              </button>
+              </StarBorder>
             </div>
-          </form>
-        </div>
-
-        <p className="sl-footer">SFT Billing · v{version} · © Surfine Technology</p>
-      </section>
-
-      <LoginShowcase logoSrc={logoSrc} forcedStep={route.forcedStep} />
-    </div>
+      </form>
+    </AuthLayout>
   );
 }

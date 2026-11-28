@@ -1,12 +1,24 @@
 import { FormEvent, useId, useState } from "react";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { getApiBaseUrl } from "@/services/backendPort";
-import LoginShowcase, { useRouteSignIn } from "./LoginShowcase";
-import { ArrowRight, Eye, EyeOff, Lock, User } from "lucide-react";
+import AuthLayout from "./AuthLayout";
+import { ArrowRight, Eye, EyeOff, Loader2, Lock, User } from "lucide-react";
 import { ForgotPasswordModal } from "./forgot-password";
+import StarBorder from "./StarBorder";
 import "./login.css";
 import "./forgot-password/forgot-password.css";
 import "./fonts";
+
+const SERVER_UNREACHABLE_MESSAGE = "Couldn't reach the server. Check that the app is running and try again.";
+
+function getAuthErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
+  const isNotFoundResponse = /^(?:not found|404(?:\s+not found)?)$/i.test(message.trim());
+  const isUnreachable = error instanceof TypeError || isNotFoundResponse ||
+    /failed to fetch|networkerror|network request failed|load failed|connection refused|connection reset|err_connection_/i.test(message);
+
+  return isUnreachable ? SERVER_UNREACHABLE_MESSAGE : message || fallback;
+}
 
 export interface LoginPageProps {
   /** URL of the OFFICIAL Surfine Technology logo (import it from your branding folder). */
@@ -29,12 +41,13 @@ export default function LoginPage({ logoSrc, version, error, loading, onSubmit }
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const displayName = username.trim().split("@", 1)[0].trim();
+  const title = displayName ? `Welcome back, ${displayName}.` : "Welcome back.";
 
   const isLoading = loading ?? busy;
-  const message = error ?? localError;
+  const message = error == null ? localError : getAuthErrorMessage(error, error);
 
   const { login } = useAuthStore();
-  const route = useRouteSignIn();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -45,17 +58,14 @@ export default function LoginPage({ logoSrc, version, error, loading, onSubmit }
     }
     setLocalError(null);
     setBusy(true);
-    // the part sets off down the route; on success it is carried to Deliver before the app opens
-    route.begin();
     try {
       if (onSubmit) {
         await onSubmit({ username: username.trim(), password });
       } else {
-        await login(username.trim(), password, false, route.deliver);
+        await login(username.trim(), password);
       }
     } catch (err) {
-      route.reset();
-      setLocalError(err instanceof Error ? err.message : "Invalid username or password.");
+      setLocalError(getAuthErrorMessage(err, "Invalid username or password."));
     } finally {
       setBusy(false);
     }
@@ -94,22 +104,15 @@ export default function LoginPage({ logoSrc, version, error, loading, onSubmit }
   }
 
   return (
-    <div className="sft-login">
-      <section className="sl-panel">
-        <div className="sl-frame-corners" aria-hidden="true">
-          <span className="sl-frame-corner sl-frame-corner--tl" />
-          <span className="sl-frame-corner sl-frame-corner--tr" />
-          <span className="sl-frame-corner sl-frame-corner--br" />
-          <span className="sl-frame-corner sl-frame-corner--bl" />
-        </div>
-        <div className="sl-formwrap">
-          <form className="sl-form" onSubmit={handleSubmit} noValidate>
-            <div>
-              <img className="sl-form-emblem" src="/brand/surfine-emblem.png" alt="Surfine Technology emblem" />
-              <h1 className="sl-title">Welcome back</h1>
-              <p className="sl-subtitle">Sign in to your workspace.</p>
-            </div>
-
+    <>
+      <AuthLayout
+        logoSrc={logoSrc}
+        title={title}
+        subtitle="Invoices, payments and reports for Surfine Technology, in one place."
+        isLoginPage
+        footer={`SFT Billing · v${version} · © Surfine Technology`}
+      >
+        <form className="sl-form" onSubmit={handleSubmit} noValidate>
             <div>
               <div className="sl-field">
                 <label className="sl-label" htmlFor={`${uid}-u`}>Username or email</label>
@@ -163,19 +166,35 @@ export default function LoginPage({ logoSrc, version, error, loading, onSubmit }
             </div>
 
             <div>
-              <button className="sl-submit" type="submit" disabled={isLoading} aria-busy={isLoading}>
-                {isLoading ? <span className="sl-spin" aria-hidden /> : null}
+              <StarBorder
+                type="submit"
+                disabled={isLoading}
+                aria-busy={isLoading}
+                className="sl-submit"
+                theme="dark"
+                backgroundColor="#e6e6e6"
+                textColor="#111111"
+                borderColor="rgb(0 0 0 / 0.12)"
+                color="#e8944f"
+                trailColor="#e8944f"
+                radius={8}
+                thickness={1}
+                duration={5}
+                direction="clockwise"
+                stars={1}
+                trailLength={0.3}
+                glow={0.45}
+                sparkle={false}
+                hover="brighten"
+                clickPulse={false}
+              >
+                {isLoading ? <Loader2 className="sl-spin" aria-hidden /> : null}
                 {isLoading ? "Signing in" : "Sign in"}
                 {!isLoading && <ArrowRight size={17} aria-hidden />}
-              </button>
+              </StarBorder>
             </div>
-          </form>
-        </div>
-
-        <p className="sl-footer">SFT Billing · v{version} · © Surfine Technology</p>
-      </section>
-
-      <LoginShowcase logoSrc={logoSrc} forcedStep={route.forcedStep} />
+        </form>
+      </AuthLayout>
 
       <ForgotPasswordModal
         open={recoveryOpen}
@@ -183,6 +202,6 @@ export default function LoginPage({ logoSrc, version, error, loading, onSubmit }
         onVerify={handleVerify}
         onResetPassword={handleResetPassword}
       />
-    </div>
+    </>
   );
 }
